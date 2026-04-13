@@ -1,7 +1,6 @@
-"""Project ORM model — minimal stub.
+"""Project ORM model.
 
-This is a minimal Project entity to support ProjectDocument linking (Epic 6).
-The full Project model (BOM, ProjectPart, etc.) will be expanded in Epic 7.
+Full project entity including BOM support (Epic 7).
 """
 
 import uuid
@@ -12,6 +11,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from makervault.database import Base
 from makervault.models.base import TimestampMixin, new_uuid
+
+PROJECT_STATUS_VALUES = ("active", "completed", "on_hold", "archived")
 
 
 class Project(TimestampMixin, Base):
@@ -30,6 +31,9 @@ class Project(TimestampMixin, Base):
     # Relationships
     document_links: Mapped[list["ProjectDocument"]] = relationship(  # noqa: F821
         "ProjectDocument", back_populates="project", cascade="all, delete-orphan"
+    )
+    project_parts: Mapped[list["ProjectPart"]] = relationship(  # noqa: F821
+        "ProjectPart", back_populates="project", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:  # pragma: no cover

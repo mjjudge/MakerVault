@@ -21,6 +21,9 @@ export function Nav() {
       <NavLink to="/documents" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
         Documents
       </NavLink>
+      <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+        Projects
+      </NavLink>
     </nav>
   )
 }

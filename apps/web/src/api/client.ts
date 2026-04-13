@@ -120,6 +120,44 @@ export interface StockItemDocumentLink {
   updated_at: string
 }
 
+export interface Project {
+  id: string
+  name: string
+  description: string | null
+  status: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ProjectPart {
+  id: string
+  project_id: string
+  part_id: string
+  quantity_required: number
+  unit: string | null
+  notes: string | null
+  part: Part
+  created_at: string
+  updated_at: string
+}
+
+export interface BOMEntryAvailability {
+  project_part_id: string
+  part_id: string
+  part_code: string
+  part_name: string
+  quantity_required: number
+  total_in_stock: number
+  is_available: boolean
+}
+
+export interface BOMAvailabilityResponse {
+  project_id: string
+  entries: BOMEntryAvailability[]
+  all_available: boolean
+}
+
 
 export interface StockItem {
   id: string
@@ -228,4 +266,33 @@ export const documentsApi = {
     docsClient.post<StockItemDocumentLink>(`/stock/${stockItemId}/documents`, data).then(r => r.data),
   unlinkFromStockItem: (stockItemId: string, linkId: string) =>
     docsClient.delete(`/stock/${stockItemId}/documents/${linkId}`),
+  // Project links
+  listForProject: (projectId: string) =>
+    docsClient.get<any[]>(`/projects/${projectId}/documents`).then(r => r.data),
+  linkToProject: (projectId: string, data: { document_id: string; relationship_type?: string; notes?: string }) =>
+    docsClient.post<any>(`/projects/${projectId}/documents`, data).then(r => r.data),
+  unlinkFromProject: (projectId: string, linkId: string) =>
+    docsClient.delete(`/projects/${projectId}/documents/${linkId}`),
+}
+
+export const projectsApi = {
+  list: (params?: { q?: string; status?: string; skip?: number; limit?: number }) =>
+    apiClient.get<PagedResponse<Project>>('/projects', { params }).then(r => r.data),
+  get: (id: string) => apiClient.get<Project>(`/projects/${id}`).then(r => r.data),
+  create: (data: Partial<Project>) => apiClient.post<Project>('/projects', data).then(r => r.data),
+  update: (id: string, data: Partial<Project>) =>
+    apiClient.patch<Project>(`/projects/${id}`, data).then(r => r.data),
+  delete: (id: string) => apiClient.delete(`/projects/${id}`),
+  // BOM entries
+  listParts: (projectId: string) =>
+    apiClient.get<ProjectPart[]>(`/projects/${projectId}/parts`).then(r => r.data),
+  addPart: (projectId: string, data: { part_id: string; quantity_required: number; unit?: string; notes?: string }) =>
+    apiClient.post<ProjectPart>(`/projects/${projectId}/parts`, data).then(r => r.data),
+  updatePart: (projectId: string, entryId: string, data: { quantity_required?: number; unit?: string; notes?: string }) =>
+    apiClient.patch<ProjectPart>(`/projects/${projectId}/parts/${entryId}`, data).then(r => r.data),
+  removePart: (projectId: string, entryId: string) =>
+    apiClient.delete(`/projects/${projectId}/parts/${entryId}`),
+  // Availability
+  getAvailability: (projectId: string) =>
+    apiClient.get<BOMAvailabilityResponse>(`/projects/${projectId}/availability`).then(r => r.data),
 }
