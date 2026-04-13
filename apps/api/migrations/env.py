@@ -27,7 +27,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # All ORM models must be imported before this line so Alembic can detect them.
-# As models are added (EPIC 3+) they should be imported here.
+import makervault.models  # noqa: F401, E402
+
 target_metadata = Base.metadata
 
 

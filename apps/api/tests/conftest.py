@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from makervault.database import Base, get_db_session
+from makervault.database import get_db_session
 from makervault.main import app
 
 # ---------------------------------------------------------------------------
@@ -28,10 +28,14 @@ def anyio_backend():
 
 @pytest.fixture
 async def db_engine():
-    """Create a fresh in-memory SQLite engine per test."""
+    """Create a fresh in-memory SQLite engine per test.
+
+    Schema creation is intentionally omitted here because models use
+    PostgreSQL-specific types (JSONB, TSVECTOR, ARRAY) that SQLite cannot
+    render.  Tests that need tables should create their own SQLite-compatible
+    DDL directly (see test_models.py for the pattern).
+    """
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield engine
     await engine.dispose()
 

@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0, 1, and 2 complete. EPIC 3 in progress.
+> **Status:** EPICs 0, 1, 2, and 3 complete. EPIC 4 in progress.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -180,10 +180,21 @@ Create the backend project skeleton with testing and migration foundations befor
 
 ---
 
-# EPIC 3 — Core domain schema: inventory foundations
+# EPIC 3 — Core domain schema: inventory foundations ✅ COMPLETE
 
 ## Goal
 Implement the first real domain slice for inventory and placement.
+
+## Completed
+- Category ORM model with hierarchical self-reference
+- Location ORM model with hierarchical self-reference
+- Container ORM model with placement rule (location OR parent container, not both)
+- Part ORM model with full field set from DATA_MODEL (enums, JSONB, TSVECTOR, arrays)
+- StockItem ORM model with placement rule (location OR container, not both)
+- Python-side `@validates` guards for dual/null placement violations
+- Cross-database compatible `CASE WHEN` check constraints
+- Alembic initial migration (`migrations/versions/0001_initial_schema.py`)
+- 17 new model tests (32 total, all passing)
 
 ## Scope
 Initial schema and persistence for:
