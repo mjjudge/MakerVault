@@ -34,7 +34,7 @@ Category ──< Part ──< StockItem >──┬── Container ──> Locat
                ├──< PartDocument >── Document
                ├──< PartAlias
                ├──< Capability
-               └──< ProjectPart >── Project
+               └──< ProjectPart >── Project ──< ProjectDocument >── Document
                                         └──< UsageHistory
 
 AIProviderConfig ──< EnrichmentJob
@@ -69,7 +69,7 @@ A **Part** is the canonical definition of a type of component, board, module, to
 | Field | Type | Description |
 |---|---|---|
 | `id` | UUID | Primary key |
-| `part_code` | text | Internal unique code |
+| `part_code` | text | Internal unique code (unique across all Parts) |
 | `name` | text | Common name (e.g. "ESP32 DevKit V1") |
 | `short_description` | text | One-line summary |
 | `long_description` | text | Extended free-text description |
@@ -82,7 +82,7 @@ A **Part** is the canonical definition of a type of component, board, module, to
 | `spec_summary` | text | Key specifications as a short text block |
 | `capabilities_json` | jsonb | Structured capability data (extensible) |
 | `tags` | text[] | Searchable tags (e.g. "I2C", "WiFi", "3.3V") |
-| `aliases` | text[] | Common names and alternate search terms (denormalised from PartAlias) |
+| `aliases` | text[] | Denormalised search/cache field derived from PartAlias; not the primary source of alias truth |
 | `search_text` | tsvector | Denormalised full-text search column |
 | `is_consumable` | boolean | Whether this part is consumed on use |
 | `is_serialised` | boolean | Whether individual units carry serial numbers |
@@ -122,8 +122,8 @@ A **StockItem** is what you physically own. One Part can have many StockItems �
 | `quantity` | numeric | Number of units |
 | `unit` | text | Unit of measure (overrides Part default if set) |
 | `condition` | enum | `new`, `used`, `tested`, `untested`, `faulty`, `damaged`, `unknown` |
-| `location_id` | UUID | Foreign key → Location (nullable if container is set) |
-| `container_id` | UUID | Foreign key → Container (nullable if location is set) |
+| `location_id` | UUID | Foreign key → Location (nullable if container is set; see *Placement rule* below) |
+| `container_id` | UUID | Foreign key → Container (nullable if location is set; see *Placement rule* below) |
 | `status` | enum | `available`, `reserved`, `consumed`, `missing`, `damaged`, `unknown` |
 | `owner_label` | text | Optional human label (e.g. "From kit", "Work spare") |
 | `serial_number` | text | Serial number (for `serialised` items) |
@@ -141,6 +141,8 @@ A **StockItem** is what you physically own. One Part can have many StockItems �
 | `notes` | text | Free-text notes |
 | `created_at` | timestamptz | Creation timestamp |
 | `updated_at` | timestamptz | Last update timestamp |
+
+> **Placement rule:** A StockItem should always have a resolvable physical placement. Direct placement uses `location_id`; nested placement uses `container_id` (from which location can be derived through the container chain). A StockItem with neither field set is only valid when its `status` explicitly marks it as unplaced (e.g. `missing` or `unknown`). Unplaced stock must not occur accidentally — it must result from an explicit workflow action.
 
 ---
 
@@ -176,10 +178,11 @@ A **Container** is a storage object within a location — a box, tray, drawer, c
 | `container_type` | enum | `box`, `tray`, `drawer`, `case`, `organiser`, `bag`, `shelf`, `bin` |
 | `location_id` | UUID | Foreign key → Location (top-level placement) |
 | `parent_container_id` | UUID | Self-reference for nested containers (nullable) |
-| `label_code` | text | Physical label code or barcode for scanning |
+| `label_code` | text | Physical label code or barcode for scanning (unique when present) |
 | `description` | text | Optional description |
 | `notes` | text | Free-text notes |
 | `is_active` | boolean | Whether this container is in use |
+| `path` | text | Materialised path for efficient subtree queries (e.g. "Garage/Case F/Tray 2"); derived and cached, not manually set |
 
 ---
 
@@ -212,6 +215,20 @@ A **Document** is any locally preserved reference material: a PDF datasheet, pin
 **Document type** (enum): `datasheet`, `manual`, `pinout`, `schematic`, `vendor_page`, `receipt`, `photo`, `project_note`, `setup_note`, `firmware_note`.
 
 Documents do not have a hard foreign key to Part or Project. They are linked via join tables so that one Document can relate to multiple entities.
+
+---
+
+### ProjectDocument
+
+Links Documents to Projects (e.g. wiring notes, project photos, setup instructions, design sketches, AI-generated plans).
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `project_id` | UUID | Foreign key → Project |
+| `document_id` | UUID | Foreign key → Document |
+| `relationship_type` | enum | `wiring_note`, `photo`, `setup_instruction`, `design_sketch`, `ai_plan`, `reference`, `other` |
+| `notes` | text | Optional notes on the relationship |
 
 ---
 
@@ -276,7 +293,7 @@ A **ProjectPart** links a Part to a Project, forming a bill of materials (BOM).
 | `quantity_required` | numeric | Number of units needed |
 | `unit` | text | Unit of measure |
 | `is_optional` | boolean | Whether this part is optional for the project |
-| `is_owned` | boolean | Whether the required quantity is currently in stock |
+| `is_owned` | boolean | Derived/cache field — whether the required quantity is currently in stock; do not treat as authoritative. Recompute from StockItem availability. |
 | `role` | enum | `controller`, `sensor`, `actuator`, `power`, `mounting`, `enclosure`, `other` |
 | `notes` | text | Free-text notes |
 
@@ -346,6 +363,8 @@ Stores configuration for each configured AI provider. Secrets (API keys) are sto
 | `base_url` | text | Base URL for the provider's API |
 | `model_name` | text | Model identifier (e.g. "gpt-4o", "llama3") |
 | `task_scope` | enum | `chat`, `enrichment`, `embeddings`, `classification`, `project_ideas` |
+
+> **Note:** `task_scope` is currently a single-value enum. If one provider configuration needs to support multiple task types cleanly, this field may evolve into a join table in a future migration.
 | `is_enabled` | boolean | Whether this provider is enabled |
 | `priority` | integer | Selection priority when multiple providers support the same scope |
 | `config_json` | jsonb | Additional non-secret configuration |
@@ -391,6 +410,7 @@ Container    1──N  StockItem
 StockItem    N──N  Document            (via StockItemDocument)
 StockItem    1──N  UsageHistory
 Project      1──N  UsageHistory
+Project      N──N  Document            (via ProjectDocument)
 AIProviderConfig  1──N  EnrichmentJob
 ```
 
@@ -442,6 +462,7 @@ Implement these entities first:
 - Document
 - PartDocument
 - StockItemDocument
+- ProjectDocument
 - Project
 - ProjectPart
 
@@ -459,6 +480,26 @@ Add when workflows and search mature:
 - UsageHistory
 - PartAlias
 - Capability
+
+---
+
+---
+
+## Likely uniqueness rules
+
+These are not yet enforced as database constraints, but should be treated as identity rules during design and migration planning:
+
+- `Part.part_code` — unique across all Parts
+- `Project.slug` — unique across all Projects
+- `Container.label_code` — unique when present (two containers must not share a scan code)
+- `(PartAlias.part_id, PartAlias.alias)` — composite unique (no duplicate alias text per part)
+- `Document.checksum` — candidates for checksum-based duplicate detection; two documents with the same SHA-256 may be the same file
+
+---
+
+## Quantities and units
+
+Quantity and unit handling must support both countable items (pcs) and measured stock (ml, m, g). `Part.default_unit` provides the default unit for a part type; `StockItem.unit` allows a per-instance override (e.g. a reel of wire recorded in metres rather than pieces). Reporting and BOM calculations must respect the active unit on each row and must not assume all quantities are dimensionless integers.
 
 ---
 
