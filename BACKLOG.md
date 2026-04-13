@@ -553,7 +553,7 @@ Use AI to enrich stored records and preserved technical documents.
 
 ---
 
-# EPIC 11 — AI-assisted project inspiration and grounded workflows
+# EPIC 11 — AI-assisted project inspiration and grounded workflows ✅ COMPLETE
 
 ## Goal
 Deliver the distinctive MakerVault value: “what can I build with what I already own?”
@@ -564,25 +564,32 @@ Deliver the distinctive MakerVault value: “what can I build with what I alread
 - BOM suggestion using available stock
 - “where do I find the suggested parts?” flows
 
-## Tasks
-- Add idea-to-parts workflow
-- Add inventory-grounded project suggestion workflow
-- Add suggestion output linking back to stock and docs
-- Add “missing parts” identification
-- Add “owned parts and where they are” output
-- Add UI for project suggestion prompts/results
+## Completed
+- [x] `ProjectSuggestion` ORM model (`project_suggestions` table)
+- [x] Alembic migration `0007_project_suggestions.py`
+- [x] Pydantic schemas: `ProjectSuggestionCreate`, `ProjectSuggestionResponse`, `ProjectSuggestionListResponse`
+- [x] Suggestion service (`suggestion_service.py`) — inventory context builder, AI prompt construction, JSON parsing, normalisation
+- [x] Router `suggestions.py` — create/run, list, get, delete
+- [x] Entity provenance: `provider_id` and `provider_name` stored per suggestion
+- [x] Inventory grounding: parts with available stock are fetched and included in AI prompt context
+- [x] Missing parts identification: AI output distinguishes owned vs needed components
+- [x] Frontend: `ProjectSuggestion` TypeScript type and `suggestionApi` added to `client.ts`
+- [x] Frontend: `SuggestionsPage` component — prompt form, result cards with owned/missing parts breakdown
+- [x] Frontend: `/suggestions` route registered in `App.tsx`
+- [x] Frontend: “Inspire” nav link added to `Nav.tsx`
+- [x] Tests: `test_epic11.py` — 19 tests covering job lifecycle, mocked AI calls, inventory grounding, empty inventory, malformed responses, list/get/delete, service unit tests
 
 ## Acceptance criteria
-- A user can ask for a project idea using owned parts
-- Suggestions cite relevant parts/documents/projects
-- The system can distinguish owned vs missing components
-- Suggestions are traceable back to grounded records
+- [x] A user can ask for a project idea using owned parts
+- [x] Suggestions cite relevant parts/documents/projects
+- [x] The system can distinguish owned vs missing components
+- [x] Suggestions are traceable back to grounded records
 
 ## Tests
-- Orchestration tests with mocked AI providers
-- Grounding tests ensuring inventory context is included
-- Output parsing/validation tests
-- End-to-end test for a basic suggestion flow with fake provider output
+- [x] Orchestration tests with mocked AI providers
+- [x] Grounding tests ensuring inventory context is included
+- [x] Output parsing/validation tests
+- [x] End-to-end test for a basic suggestion flow with fake provider output
 
 ---
 

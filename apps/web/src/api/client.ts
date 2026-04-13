@@ -409,3 +409,55 @@ export const enrichmentApi = {
   delete: (id: string) =>
     apiClient.delete(`/enrichment/jobs/${id}`),
 }
+
+// ---------------------------------------------------------------------------
+// Project suggestions (Epic 11)
+// ---------------------------------------------------------------------------
+
+export type SuggestionStatus = 'pending' | 'running' | 'done' | 'failed'
+
+export interface SuggestionOwedPart {
+  part_id: string
+  part_name: string
+}
+
+export interface SuggestionMissingPart {
+  name: string
+  notes?: string
+}
+
+export interface SuggestionIdea {
+  title: string
+  description: string
+  difficulty?: string
+  owned_parts?: SuggestionOwedPart[]
+  missing_parts?: SuggestionMissingPart[]
+}
+
+export interface ProjectSuggestion {
+  id: string
+  prompt: string
+  status: SuggestionStatus
+  provider_id: string | null
+  provider_name: string | null
+  result_json: { suggestions: SuggestionIdea[] } | null
+  error_message: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const suggestionApi = {
+  /** Create and immediately run a project suggestion. */
+  create: (prompt: string) =>
+    apiClient.post<ProjectSuggestion>('/suggestions', { prompt }).then(r => r.data),
+
+  list: (params?: { skip?: number; limit?: number }) =>
+    apiClient.get<PagedResponse<ProjectSuggestion>>('/suggestions', { params }).then(r => r.data),
+
+  get: (id: string) =>
+    apiClient.get<ProjectSuggestion>(`/suggestions/${id}`).then(r => r.data),
+
+  delete: (id: string) =>
+    apiClient.delete(`/suggestions/${id}`),
+}
+

@@ -2,7 +2,7 @@
 
 MakerVault is a self-hosted inventory and knowledge system for electronics, IoT, workshop parts, tools, and technical reference material. It helps you track what you own, where it is stored, what it can do, which projects it has been used in, and what you could build with it. The system preserves important technical reference material locally and supports pluggable AI providers rather than hard-coding any single AI vendor.
 
-> **Status:** Active development. Epics 0–8 complete. Core inventory, stock, locations, documents, projects, BOM, and search refinement are all working. See [BACKLOG.md](BACKLOG.md) for the full roadmap.
+> **Status:** Active development. Epics 0–10 complete. Core inventory, stock, locations, documents, projects, BOM, search refinement, AI provider abstraction, and AI enrichment are all working. See [BACKLOG.md](BACKLOG.md) for the full roadmap.
 
 ---
 
@@ -18,6 +18,8 @@ MakerVault is a self-hosted inventory and knowledge system for electronics, IoT,
 | Part aliases — alternate-name search | ✅ |
 | Tag-based filtering | ✅ |
 | Resolved placement paths in stock responses | ✅ |
+| AI enrichment jobs (enrich parts and documents on demand) | ✅ |
+| AI project inspiration — "what can I build with what I own?" | ✅ |
 | OpenAPI docs at `/api/docs` | ✅ |
 
 ---
@@ -168,8 +170,7 @@ MakerVault/
 
 ## Next steps
 
-1. Epic 10 — AI enrichment and document understanding
-2. Epic 11 — AI-assisted project inspiration
-3. Epic 12 — Usage history and stock lifecycle
+1. Epic 12 — Usage history and stock lifecycle
+2. Epic 13 — Imports, labels, and operational polish
 
 See [`BACKLOG.md`](BACKLOG.md) for the full phased plan and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased roadmap.
