@@ -71,11 +71,13 @@ MakerVault is composed of three application processes, a database, a document st
 
 ### AI provider layer
 
-- A provider abstraction defined in `apps/api` (and shared with the worker)
-- Each provider implements a consistent interface: `complete(prompt)`, `embed(text)` (optional), `health_check()`
-- Provider configuration is stored in the database; secrets (API keys) come from environment variables
-- Supported provider types (planned): `openai`, `anthropic`, `ollama`, `deepseek`, `openai_compatible`
-- Only one provider needs to be active at a time; multiple can be configured and switched
+- A provider abstraction defined in `apps/api/src/makervault/ai/`
+- Each provider implements a consistent interface: `complete(messages)`, `embed(text)` (optional), `health_check()`
+- Provider configuration is stored in the `ai_provider_configs` table; secrets (API keys) come from environment variables — **never stored in the database**
+- The `api_key_env_var` field records the *name* of the environment variable the adapter reads at runtime
+- Supported provider types: `openai`, `openai_compatible`, `ollama`, `anthropic`
+- Only one provider needs to be active at a time; multiple can be configured and switched via the AI Settings page (`/ai`)
+- Provider management API: `GET/POST/PATCH/DELETE /api/ai/providers` + `POST /api/ai/providers/{id}/health`
 
 ### Nginx (reverse proxy)
 

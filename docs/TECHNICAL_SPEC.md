@@ -97,11 +97,12 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a diagram.
 
 ## AI integration approach
 
-- A single `AIProvider` abstraction interface is defined in `apps/api`
-- Each provider implements: `complete(prompt)`, `embed(text)` (optional), `health_check()`
-- Provider configuration (type, endpoint, API key) is stored in the database and/or environment variables
-- Multiple providers can be configured; the active provider is selected per request or per task
-- Supported provider types (planned): OpenAI, Anthropic, Ollama, DeepSeek, OpenAI-compatible endpoint
+- A single `AIProvider` abstraction is defined in `apps/api/src/makervault/ai/`
+- The abstract base class `AIProvider` defines: `complete(messages)`, `embed(text)` (optional), `health_check()`
+- Concrete adapters: `OpenAIProvider` (covers `openai` and `openai_compatible`), `OllamaProvider` (local self-hosted)
+- Provider configuration (type, endpoint, model) is stored in the `ai_provider_configs` table; API keys come from environment variables — **never persisted in the database**; `api_key_env_var` stores only the env var name
+- Multiple providers can be configured; the active (default) provider is selected per request via `get_active_provider()`
+- Supported provider types: `openai`, `openai_compatible`, `ollama`, `anthropic`
 - **The database is the source of truth.** AI outputs are used for enrichment and suggestion only; they do not modify the inventory without user confirmation
 
 ---

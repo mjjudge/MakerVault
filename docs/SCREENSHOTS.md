@@ -99,3 +99,30 @@ instead of raw UUID fragments. The Part column now shows the part name as a clic
 to the part detail page.
 
 > Screenshot to be added after next deployment.
+
+---
+
+## 9. AI Settings — Provider List (Epic 9)
+
+**URL:** `/ai`
+
+New in Epic 9 — a dedicated **AI Settings** page accessible from the global navigation bar.
+Shows all configured AI providers with their type, model, and enabled/default status.
+Includes a live **Test** button for each provider (health-check against the actual endpoint),
+enable/disable toggle, "Set default" shortcut, and an edit/delete workflow.
+A help panel at the bottom explains how API keys are managed via environment variables.
+
+![AI Settings — empty state](https://github.com/user-attachments/assets/fc71958e-f2c7-4bfa-baba-a917b2ff1151)
+
+---
+
+## 10. AI Settings — Add Provider Modal (Epic 9)
+
+**URL:** `/ai` (modal)
+
+The **Add AI Provider** modal. Selecting a provider type auto-populates sensible defaults
+(base URL for Ollama, model name, env var name for OpenAI). The `api_key_env_var` field
+records the *name* of the environment variable holding the API key — the key itself is
+never sent to or stored by the server.
+
+![AI Settings — Add Provider modal](https://github.com/user-attachments/assets/ea21530f-3358-4acd-86ab-573a9a84c462)

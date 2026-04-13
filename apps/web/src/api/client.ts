@@ -168,6 +168,27 @@ export interface BOMAvailabilityResponse {
   all_available: boolean
 }
 
+export interface AIProviderConfig {
+  id: string
+  name: string
+  provider_type: 'openai' | 'anthropic' | 'ollama' | 'openai_compatible'
+  base_url: string | null
+  model: string
+  api_key_env_var: string | null
+  is_enabled: boolean
+  is_default: boolean
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface HealthCheckResponse {
+  provider_id: string
+  provider_name: string
+  healthy: boolean
+  detail: string | null
+}
+
 
 export interface StockItem {
   id: string
@@ -314,4 +335,18 @@ export const projectsApi = {
   // Availability
   getAvailability: (projectId: string) =>
     apiClient.get<BOMAvailabilityResponse>(`/projects/${projectId}/availability`).then(r => r.data),
+}
+
+export const aiApi = {
+  list: () =>
+    apiClient.get<AIProviderConfig[]>('/ai/providers').then(r => r.data),
+  get: (id: string) =>
+    apiClient.get<AIProviderConfig>(`/ai/providers/${id}`).then(r => r.data),
+  create: (data: Partial<AIProviderConfig>) =>
+    apiClient.post<AIProviderConfig>('/ai/providers', data).then(r => r.data),
+  update: (id: string, data: Partial<AIProviderConfig>) =>
+    apiClient.patch<AIProviderConfig>(`/ai/providers/${id}`, data).then(r => r.data),
+  delete: (id: string) => apiClient.delete(`/ai/providers/${id}`),
+  healthCheck: (id: string) =>
+    apiClient.post<HealthCheckResponse>(`/ai/providers/${id}/health`).then(r => r.data),
 }
