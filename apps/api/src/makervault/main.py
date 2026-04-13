@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from makervault import __version__
 from makervault.config import get_settings
-from makervault.routers import categories, containers, health, locations, parts, stock
+from makervault.routers import categories, containers, documents, health, locations, parts, stock
 
 settings = get_settings()
 
@@ -35,3 +35,4 @@ app.include_router(locations.router, prefix="/api")
 app.include_router(containers.router, prefix="/api")
 app.include_router(parts.router, prefix="/api")
 app.include_router(stock.router, prefix="/api")
+app.include_router(documents.router, prefix="/api/v1")

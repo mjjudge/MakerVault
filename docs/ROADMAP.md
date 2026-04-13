@@ -33,12 +33,14 @@ This roadmap is broken into phases. Each phase should be functional and stable b
 
 ## Phase 2 — Documents and local capture
 
-- [ ] Database schema: Document, PartDocument, StockItemDocument
-- [ ] API: document upload endpoint (PDF, image, HTML)
-- [ ] Document storage on local volume with UUID-based paths
-- [ ] API: document retrieval with access control check
-- [ ] API: link/unlink documents to parts and stock items via join tables
-- [ ] Frontend: attach documents to parts or stock items
+- [x] Database schema: Document, PartDocument, StockItemDocument, ProjectDocument, Project (stub)
+- [x] API: document upload endpoint (PDF, image, and any file type)
+- [x] Document storage on local volume with UUID-based paths and SHA-256 checksum
+- [x] API: document retrieval and metadata endpoints
+- [x] API: link/unlink documents to parts, stock items, and projects via join tables
+- [x] Frontend: attach documents to parts (upload + link from Part Detail page)
+- [x] Frontend: Documents page — list, search, filter, delete
+- [x] Frontend: Documents nav link
 - [ ] Frontend: inline PDF and image viewer
 - [ ] Frontend: note/text document creation
 - [ ] Optional: capture a vendor web page as a locally preserved HTML snapshot

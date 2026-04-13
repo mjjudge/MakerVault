@@ -80,6 +80,47 @@ export interface Part {
   updated_at: string
 }
 
+export interface Document {
+  id: string
+  title: string
+  document_type: string
+  source_type: string
+  source_url: string | null
+  local_path: string | null
+  mime_type: string | null
+  checksum: string | null
+  file_size_bytes: number | null
+  text_extracted: string | null
+  summary: string | null
+  version_label: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PartDocumentLink {
+  id: string
+  part_id: string
+  document_id: string
+  relationship_type: string
+  is_primary: boolean
+  notes: string | null
+  document: Document
+  created_at: string
+  updated_at: string
+}
+
+export interface StockItemDocumentLink {
+  id: string
+  stock_item_id: string
+  document_id: string
+  notes: string | null
+  document: Document
+  created_at: string
+  updated_at: string
+}
+
+
 export interface StockItem {
   id: string
   part_id: string
@@ -154,4 +195,37 @@ export const categoriesApi = {
   update: (id: string, data: Partial<Category>) =>
     apiClient.patch<Category>(`/categories/${id}`, data).then(r => r.data),
   delete: (id: string) => apiClient.delete(`/categories/${id}`),
+}
+
+// Note: documents API uses /api/v1 prefix (versioned endpoint introduced in Epic 6)
+const docsClient = axios.create({
+  baseURL: '/api/v1',
+  timeout: 30_000,
+})
+
+export const documentsApi = {
+  list: (params?: { q?: string; document_type?: string; skip?: number; limit?: number }) =>
+    docsClient.get<PagedResponse<Document>>('/documents', { params }).then(r => r.data),
+  get: (id: string) => docsClient.get<Document>(`/documents/${id}`).then(r => r.data),
+  upload: (formData: FormData) =>
+    docsClient.post<Document>('/documents/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data),
+  update: (id: string, data: Partial<Document>) =>
+    docsClient.patch<Document>(`/documents/${id}`, data).then(r => r.data),
+  delete: (id: string) => docsClient.delete(`/documents/${id}`),
+  // Part links
+  listForPart: (partId: string) =>
+    docsClient.get<PartDocumentLink[]>(`/parts/${partId}/documents`).then(r => r.data),
+  linkToPart: (partId: string, data: { document_id: string; relationship_type?: string; is_primary?: boolean; notes?: string }) =>
+    docsClient.post<PartDocumentLink>(`/parts/${partId}/documents`, data).then(r => r.data),
+  unlinkFromPart: (partId: string, linkId: string) =>
+    docsClient.delete(`/parts/${partId}/documents/${linkId}`),
+  // Stock item links
+  listForStockItem: (stockItemId: string) =>
+    docsClient.get<StockItemDocumentLink[]>(`/stock/${stockItemId}/documents`).then(r => r.data),
+  linkToStockItem: (stockItemId: string, data: { document_id: string; notes?: string }) =>
+    docsClient.post<StockItemDocumentLink>(`/stock/${stockItemId}/documents`, data).then(r => r.data),
+  unlinkFromStockItem: (stockItemId: string, linkId: string) =>
+    docsClient.delete(`/stock/${stockItemId}/documents/${linkId}`),
 }

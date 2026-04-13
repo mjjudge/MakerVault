@@ -18,6 +18,9 @@ export function Nav() {
       <NavLink to="/locations" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
         Locations
       </NavLink>
+      <NavLink to="/documents" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+        Documents
+      </NavLink>
     </nav>
   )
 }

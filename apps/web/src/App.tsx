@@ -5,6 +5,7 @@ import { PartsPage } from './pages/PartsPage'
 import { PartDetailPage } from './pages/PartDetailPage'
 import { StockPage } from './pages/StockPage'
 import { LocationsPage } from './pages/LocationsPage'
+import { DocumentsPage } from './pages/DocumentsPage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/parts/:id" element={<PartDetailPage />} />
           <Route path="/stock" element={<StockPage />} />
           <Route path="/locations" element={<LocationsPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
         </Routes>
       </main>
     </div>

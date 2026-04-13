@@ -121,6 +121,9 @@ class StockItem(TimestampMixin, Base):
         back_populates="stock_items",
         foreign_keys=[container_id],
     )
+    document_links: Mapped[list["StockItemDocument"]] = relationship(  # noqa: F821
+        "StockItemDocument", back_populates="stock_item", cascade="all, delete-orphan"
+    )
 
     @validates("location_id", "container_id")
     def validate_single_placement(self, key: str, value):
