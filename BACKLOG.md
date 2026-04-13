@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0, 1, 2, and 3 complete. EPIC 4 in progress.
+> **Status:** EPICs 0–4 complete. EPIC 5 in progress.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -232,10 +232,22 @@ Initial schema and persistence for:
 
 ---
 
-# EPIC 4 — Basic API: parts, stock, locations, containers
+# EPIC 4 — Basic API: parts, stock, locations, containers ✅ COMPLETE
 
 ## Goal
 Expose the inventory foundation through a practical REST API.
+
+## Completed
+- Pydantic schemas for all 5 resources (Category, Location, Container, Part, StockItem)
+- CRUD endpoints (create, read, update, delete, list) for all resources
+- Filtering by category, status, part_kind, location, container, part_id
+- Pagination (skip/limit) on all list endpoints
+- Simple text search over parts (name, code, description, manufacturer, MPN)
+- Placement-aware stock retrieval
+- Input validation (placement rules, enum values, required fields)
+- Part code uniqueness enforced at API level (409 Conflict)
+- 31 new API endpoint tests (63 total, all passing)
+- OpenAPI docs available at `/api/docs`
 
 ## Scope
 CRUD and list/search APIs for:
