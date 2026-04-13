@@ -2,7 +2,41 @@
 
 MakerVault is a self-hosted inventory and knowledge system for electronics, IoT, workshop parts, tools, and technical reference material. It helps you track what you own, where it is stored, what it can do, which projects it has been used in, and what you could build with it. The system preserves important technical reference material locally and supports pluggable AI providers rather than hard-coding any single AI vendor.
 
-> **Status:** Early-stage scaffold. Application services are containerised placeholders. No business logic has been implemented yet.
+> **Status:** Active development. Epics 0–8 complete. Core inventory, stock, locations, documents, projects, BOM, and search refinement are all working. See [BACKLOG.md](BACKLOG.md) for the full roadmap.
+
+---
+
+## What's working
+
+| Feature | Status |
+|---|---|
+| Parts catalogue (create, edit, search, delete) | ✅ |
+| Stock items with physical placement | ✅ |
+| Hierarchical locations and containers | ✅ |
+| Document upload, storage, and linking to parts/stock/projects | ✅ |
+| Projects and Bill of Materials with availability check | ✅ |
+| Part aliases — alternate-name search | ✅ |
+| Tag-based filtering | ✅ |
+| Resolved placement paths in stock responses | ✅ |
+| OpenAPI docs at `/api/docs` | ✅ |
+
+---
+
+## Screenshots
+
+### Home / Search
+
+![Home page](https://github.com/user-attachments/assets/0ef25202-6f93-4523-9bf4-1c7dbd433aa2)
+
+### Part Detail — with aliases and tags
+
+![Part detail — ESP32 DevKit V1](https://github.com/user-attachments/assets/98c93ce8-eff1-4366-b13c-62bdb3589e45)
+
+### Project Detail — BOM & Availability
+
+![Project detail — BOM availability](https://github.com/user-attachments/assets/2c8cbf23-ad8b-48c9-bb0f-0f4dd4feb0d7)
+
+See [`docs/SCREENSHOTS.md`](docs/SCREENSHOTS.md) for the full screenshot gallery.
 
 ---
 
@@ -49,14 +83,27 @@ Once running:
 |---|---|
 | Web UI | http://localhost |
 | API | http://localhost/api *(proxied via nginx)* |
-
-> **Note:** Application images are currently placeholders. The web and API services will return placeholder output until `apps/` are implemented. PostgreSQL and the document volume are active and persistent.
+| API Docs | http://localhost/api/docs |
 
 To stop: `docker compose -f infra/docker/docker-compose.yml down` or `make down`.
 
 ---
 
+## Running tests
 
+```sh
+# Backend tests (Python — no PostgreSQL required; uses SQLite in-memory)
+cd apps/api
+pip install -e ".[dev]"
+python -m pytest tests/ -v
+
+# Frontend tests
+cd apps/web
+npm install
+npm test
+```
+
+---
 
 ## Architecture
 
@@ -67,7 +114,7 @@ To stop: `docker compose -f infra/docker/docker-compose.yml down` or `make down`
 | Database | PostgreSQL 16 (Docker, persistent volume) |
 | Document store | Local filesystem volume (`/data/makervault/documents`) |
 | Background jobs | Worker process (Python), containerised |
-| AI abstraction | Pluggable provider layer |
+| AI abstraction | Pluggable provider layer (planned — Epic 9) |
 | Reverse proxy | Nginx (Docker) |
 | Deployment | Docker Compose on Ubuntu |
 
@@ -79,13 +126,25 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for details.
 MakerVault/
 ├── README.md
 ├── AGENTS.md
+├── BACKLOG.md
 ├── Makefile
 ├── .gitignore
 ├── .editorconfig
 ├── LICENSE
 ├── apps/
 │   ├── api/          # FastAPI backend
+│   │   ├── src/makervault/
+│   │   │   ├── models/     # SQLAlchemy ORM models
+│   │   │   ├── routers/    # FastAPI endpoint routers
+│   │   │   ├── schemas/    # Pydantic request/response schemas
+│   │   │   └── services/   # Business logic and file storage
+│   │   ├── migrations/     # Alembic database migrations
+│   │   └── tests/          # Pytest test suite
 │   ├── web/          # React + Vite frontend
+│   │   └── src/
+│   │       ├── api/        # Typed API client
+│   │       ├── pages/      # Route page components
+│   │       └── components/ # Shared UI components
 │   └── worker/       # Background job worker
 ├── docs/
 │   ├── PRODUCT_VISION.md
@@ -95,7 +154,8 @@ MakerVault/
 │   ├── ROADMAP.md
 │   ├── API_SPEC.md
 │   ├── UX_NOTES.md
-│   └── DECISIONS.md
+│   ├── DECISIONS.md
+│   └── SCREENSHOTS.md
 ├── infra/
 │   ├── docker/       # Docker Compose and service configs
 │   └── nginx/        # Reverse proxy config
@@ -107,12 +167,8 @@ MakerVault/
 
 ## Next steps
 
-1. Review and agree on the data model in [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md)
-2. Review architectural decisions in [`docs/DECISIONS.md`](docs/DECISIONS.md)
-3. Implement the FastAPI project in `apps/api/` and add its `Dockerfile`
-4. Implement the React + Vite project in `apps/web/` and add its `Dockerfile`
-5. Write the Nginx config in `infra/nginx/` to proxy `/api` → api and `/` → web
-6. Create initial database migrations
-7. Implement Phase 1 as described in [`docs/ROADMAP.md`](docs/ROADMAP.md)
+1. Epic 9 — AI provider abstraction (pluggable provider interface, hosted + local adapters)
+2. Epic 10 — AI enrichment and document understanding
+3. Epic 11 — AI-assisted project inspiration
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full phased plan.
+See [`BACKLOG.md`](BACKLOG.md) for the full phased plan and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased roadmap.

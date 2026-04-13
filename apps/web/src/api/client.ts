@@ -67,6 +67,7 @@ export interface Part {
   spec_summary: string | null
   capabilities_json: Record<string, unknown> | null
   tags: string[] | null
+  aliases: string[] | null
   is_consumable: boolean
   is_serialised: boolean
   is_hazardous: boolean
@@ -75,6 +76,15 @@ export interface Part {
   identification_confidence: number | null
   needs_review: boolean
   provenance: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PartAlias {
+  id: string
+  part_id: string
+  alias: string
   notes: string | null
   created_at: string
   updated_at: string
@@ -164,6 +174,8 @@ export interface StockItem {
   part_id: string
   location_id: string | null
   container_id: string | null
+  location_name: string | null
+  container_name: string | null
   quantity: number
   unit: string | null
   status: string
@@ -193,6 +205,13 @@ export const partsApi = {
   update: (id: string, data: Partial<Part>) =>
     apiClient.patch<Part>(`/parts/${id}`, data).then(r => r.data),
   delete: (id: string) => apiClient.delete(`/parts/${id}`),
+  // Aliases
+  listAliases: (partId: string) =>
+    apiClient.get<PartAlias[]>(`/parts/${partId}/aliases`).then(r => r.data),
+  addAlias: (partId: string, data: { alias: string; notes?: string }) =>
+    apiClient.post<PartAlias>(`/parts/${partId}/aliases`, data).then(r => r.data),
+  removeAlias: (partId: string, aliasId: string) =>
+    apiClient.delete(`/parts/${partId}/aliases/${aliasId}`),
 }
 
 export const stockApi = {

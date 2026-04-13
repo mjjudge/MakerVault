@@ -21,6 +21,48 @@ from makervault.schemas.stock_item import (
 router = APIRouter(prefix="/stock", tags=["stock"])
 
 
+async def _build_placement_lookups(
+    items: list[StockItem], db: AsyncSession
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Return (location_names, container_names) dicts keyed by str(id)."""
+    location_ids = {item.location_id for item in items if item.location_id}
+    container_ids = {item.container_id for item in items if item.container_id}
+
+    location_names: dict[str, str] = {}
+    if location_ids:
+        locs = (
+            await db.execute(
+                select(Location).where(Location.id.in_(location_ids))
+            )
+        ).scalars().all()
+        location_names = {str(loc.id): loc.name for loc in locs}
+
+    container_names: dict[str, str] = {}
+    if container_ids:
+        ctrs = (
+            await db.execute(
+                select(Container).where(Container.id.in_(container_ids))
+            )
+        ).scalars().all()
+        container_names = {str(ctr.id): ctr.name for ctr in ctrs}
+
+    return location_names, container_names
+
+
+def _enrich(
+    item: StockItem,
+    location_names: dict[str, str],
+    container_names: dict[str, str],
+) -> StockItemResponse:
+    data = {
+        c.key: getattr(item, c.key)
+        for c in item.__table__.columns
+    }
+    data["location_name"] = location_names.get(str(item.location_id)) if item.location_id else None
+    data["container_name"] = container_names.get(str(item.container_id)) if item.container_id else None
+    return StockItemResponse.model_validate(data)
+
+
 @router.get("", response_model=StockItemListResponse, summary="List stock items")
 async def list_stock(
     skip: int = Query(0, ge=0),
@@ -51,8 +93,11 @@ async def list_stock(
     total = (await db.execute(count_query)).scalar_one()
     result = await db.execute(query.order_by(StockItem.created_at.desc()).offset(skip).limit(limit))
     items = result.scalars().all()
+
+    location_names, container_names = await _build_placement_lookups(items, db)
     return StockItemListResponse(
-        items=[StockItemResponse.model_validate(s) for s in items], total=total
+        items=[_enrich(s, location_names, container_names) for s in items],
+        total=total,
     )
 
 
@@ -88,7 +133,8 @@ async def create_stock_item(
     db.add(stock_item)
     await db.flush()
     await db.refresh(stock_item)
-    return StockItemResponse.model_validate(stock_item)
+    loc_names, ctr_names = await _build_placement_lookups([stock_item], db)
+    return _enrich(stock_item, loc_names, ctr_names)
 
 
 @router.get(
@@ -106,7 +152,8 @@ async def get_stock_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"StockItem {stock_item_id} not found.",
         )
-    return StockItemResponse.model_validate(item)
+    loc_names, ctr_names = await _build_placement_lookups([item], db)
+    return _enrich(item, loc_names, ctr_names)
 
 
 @router.patch(
@@ -130,7 +177,8 @@ async def update_stock_item(
         setattr(item, field, value)
     await db.flush()
     await db.refresh(item)
-    return StockItemResponse.model_validate(item)
+    loc_names, ctr_names = await _build_placement_lookups([item], db)
+    return _enrich(item, loc_names, ctr_names)
 
 
 @router.delete(
