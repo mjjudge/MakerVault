@@ -458,10 +458,23 @@ Make the system genuinely efficient for real workshop use.
 
 ---
 
-# EPIC 9 — AI provider abstraction
+# EPIC 9 — AI provider abstraction ✅ COMPLETE
 
 ## Goal
 Introduce AI in a provider-agnostic way without hard-coding one model vendor.
+
+## Completed
+- `AIProviderConfig` ORM model — stores provider config in the database; API keys are **never** persisted (stored as env var names only)
+- `AIProvider` abstract base class with `complete`, `embed`, and `health_check` interfaces
+- `OpenAIProvider` adapter — covers `openai` and `openai_compatible` provider types
+- `OllamaProvider` adapter — covers self-hosted Ollama instances
+- Provider service (`build_provider`, `get_active_provider`, `get_provider_by_id`) for config loading and adapter selection
+- Alembic migration `0005_ai_provider_configs.py`
+- `httpx` added as a runtime dependency for HTTP calls to AI endpoints
+- REST API: `GET/POST/PATCH/DELETE /api/ai/providers` + `POST /api/ai/providers/{id}/health`
+- AI Settings page (`/ai`) in the web UI — list, add, edit, delete, enable/disable, set default, live health-check
+- "AI" nav link added to the global navigation bar
+- 30 new tests in `test_epic9.py` (153 total, all passing)
 
 ## Scope
 - provider config
@@ -471,30 +484,30 @@ Introduce AI in a provider-agnostic way without hard-coding one model vendor.
 - one local/OpenAI-compatible adapter
 
 ## Tasks
-- Implement `AIProviderConfig`
-- Define internal interfaces for:
+- ✅ Implement `AIProviderConfig`
+- ✅ Define internal interfaces for:
   - chat/reasoning
   - document summarisation
   - metadata extraction
   - project suggestion
   - embeddings later if needed
-- Implement provider selection/config loading
-- Add one hosted adapter
-- Add one local/OpenAI-compatible adapter
-- Ensure secrets remain outside the database
+- ✅ Implement provider selection/config loading
+- ✅ Add one hosted adapter (OpenAI / OpenAI-compatible)
+- ✅ Add one local adapter (Ollama)
+- ✅ Ensure secrets remain outside the database
 
 ## Acceptance criteria
-- AI providers can be configured without changing business logic
-- The app can select an enabled provider for a task
-- Grounded context can be passed into AI workflows
-- The abstraction does not assume one permanent provider
+- ✅ AI providers can be configured without changing business logic
+- ✅ The app can select an enabled provider for a task
+- ✅ Grounded context can be passed into AI workflows
+- ✅ The abstraction does not assume one permanent provider
 
 ## Tests
-- Provider config tests
-- Adapter contract tests
-- Mocked orchestration tests
-- Failure/fallback tests
-- Tests confirming no secrets are persisted in DB records
+- ✅ Provider config tests
+- ✅ Adapter contract tests
+- ✅ Mocked orchestration tests
+- ✅ Failure/fallback tests
+- ✅ Tests confirming no secrets are persisted in DB records
 
 ---
 

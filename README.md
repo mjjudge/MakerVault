@@ -114,7 +114,7 @@ npm test
 | Database | PostgreSQL 16 (Docker, persistent volume) |
 | Document store | Local filesystem volume (`/data/makervault/documents`) |
 | Background jobs | Worker process (Python), containerised |
-| AI abstraction | Pluggable provider layer (planned — Epic 9) |
+| AI abstraction | Pluggable provider layer — OpenAI, Ollama, OpenAI-compatible (Epic 9 ✅) |
 | Reverse proxy | Nginx (Docker) |
 | Deployment | Docker Compose on Ubuntu |
 
@@ -134,6 +134,7 @@ MakerVault/
 ├── apps/
 │   ├── api/          # FastAPI backend
 │   │   ├── src/makervault/
+│   │   │   ├── ai/         # AI provider abstraction (base, adapters, service)
 │   │   │   ├── models/     # SQLAlchemy ORM models
 │   │   │   ├── routers/    # FastAPI endpoint routers
 │   │   │   ├── schemas/    # Pydantic request/response schemas
@@ -167,8 +168,8 @@ MakerVault/
 
 ## Next steps
 
-1. Epic 9 — AI provider abstraction (pluggable provider interface, hosted + local adapters)
-2. Epic 10 — AI enrichment and document understanding
-3. Epic 11 — AI-assisted project inspiration
+1. Epic 10 — AI enrichment and document understanding
+2. Epic 11 — AI-assisted project inspiration
+3. Epic 12 — Usage history and stock lifecycle
 
 See [`BACKLOG.md`](BACKLOG.md) for the full phased plan and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased roadmap.
