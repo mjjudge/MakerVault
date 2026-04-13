@@ -416,7 +416,7 @@ export const enrichmentApi = {
 
 export type SuggestionStatus = 'pending' | 'running' | 'done' | 'failed'
 
-export interface SuggestionOwedPart {
+export interface SuggestionOwnedPart {
   part_id: string
   part_name: string
 }
@@ -430,7 +430,7 @@ export interface SuggestionIdea {
   title: string
   description: string
   difficulty?: string
-  owned_parts?: SuggestionOwedPart[]
+  owned_parts?: SuggestionOwnedPart[]
   missing_parts?: SuggestionMissingPart[]
 }
 
