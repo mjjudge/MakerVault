@@ -1,6 +1,6 @@
 # Technical Specification
 
-> **Status:** Planning phase. No implementation has begun. This document describes intended direction, not current state.
+> **Status:** Docker Compose scaffold is in place. Application services are containerised placeholders. No business logic has been implemented yet.
 
 ---
 
@@ -23,6 +23,20 @@
 - Vector database or semantic search infrastructure (deferred to a later phase)
 - Kubernetes or distributed deployment
 - Real-time collaboration
+
+---
+
+## Deployment
+
+Docker Compose is the primary and intended way to run MakerVault. All services are containerised. No local Python or Node.js installation is required to run the system.
+
+```sh
+cp infra/docker/.env.example infra/docker/.env
+# Set POSTGRES_PASSWORD and SECRET_KEY in .env
+docker compose -f infra/docker/docker-compose.yml up
+```
+
+See [`infra/docker/README.md`](../infra/docker/README.md) for the full quick-start guide.
 
 ---
 
@@ -66,15 +80,18 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a diagram.
 
 ### Database
 
-- PostgreSQL 16+
+- PostgreSQL 16+, running in Docker with a named volume (`db_data`) for persistence
+- Data survives container restarts and re-creations
 - Managed via Alembic migrations
 - No ORM-level soft-delete magic; explicit fields where needed
 
 ### Document store
 
-- Local filesystem directory mounted as a Docker volume
+- Local filesystem directory mounted as a named Docker volume (`documents`)
+- Mounted into both `api` and `worker` containers at `/data/makervault/documents`
 - Files stored by UUID with metadata in the DB
 - Subdirectories by entity type for clarity (e.g. `documents/parts/`, `documents/projects/`)
+- **This volume must not be deleted.** It is the primary store for all user-uploaded documents and is not replicated anywhere.
 
 ---
 
