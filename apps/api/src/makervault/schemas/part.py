@@ -98,6 +98,19 @@ class PartResponse(BaseSchema):
             return [a.strip() for a in stripped.split(",") if a.strip()]
         return v
 
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _coerce_tags(cls, v: Any) -> Any:
+        """Accept a plain string (SQLite comma-sep storage) or native list."""
+        if v is None or isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            stripped = v.strip()
+            if not stripped:
+                return None
+            return [t.strip() for t in stripped.split(",") if t.strip()]
+        return v
+
 
 class PartListResponse(BaseSchema):
     items: list[PartResponse]

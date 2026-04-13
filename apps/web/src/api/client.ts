@@ -350,3 +350,62 @@ export const aiApi = {
   healthCheck: (id: string) =>
     apiClient.post<HealthCheckResponse>(`/ai/providers/${id}/health`).then(r => r.data),
 }
+
+export type EnrichmentJobType =
+  | 'summarise_document'
+  | 'extract_metadata'
+  | 'generate_aliases'
+  | 'classify_part'
+
+export type EnrichmentEntityType = 'part' | 'document'
+
+export type EnrichmentJobStatus =
+  | 'pending'
+  | 'running'
+  | 'done'
+  | 'failed'
+  | 'dismissed'
+
+export interface EnrichmentJob {
+  id: string
+  job_type: EnrichmentJobType
+  entity_type: EnrichmentEntityType
+  entity_id: string
+  status: EnrichmentJobStatus
+  provider_id: string | null
+  provider_name: string | null
+  result_json: Record<string, unknown> | null
+  confidence: number | null
+  error_message: string | null
+  applied_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const enrichmentApi = {
+  /** Create and immediately run an enrichment job. */
+  create: (data: { job_type: EnrichmentJobType; entity_type: EnrichmentEntityType; entity_id: string }) =>
+    apiClient.post<EnrichmentJob>('/enrichment/jobs', data).then(r => r.data),
+
+  list: (params?: {
+    entity_type?: EnrichmentEntityType
+    entity_id?: string
+    job_type?: EnrichmentJobType
+    status?: EnrichmentJobStatus
+    skip?: number
+    limit?: number
+  }) =>
+    apiClient.get<PagedResponse<EnrichmentJob>>('/enrichment/jobs', { params }).then(r => r.data),
+
+  get: (id: string) =>
+    apiClient.get<EnrichmentJob>(`/enrichment/jobs/${id}`).then(r => r.data),
+
+  apply: (id: string) =>
+    apiClient.post<EnrichmentJob>(`/enrichment/jobs/${id}/apply`).then(r => r.data),
+
+  dismiss: (id: string) =>
+    apiClient.post<EnrichmentJob>(`/enrichment/jobs/${id}/dismiss`).then(r => r.data),
+
+  delete: (id: string) =>
+    apiClient.delete(`/enrichment/jobs/${id}`),
+}
