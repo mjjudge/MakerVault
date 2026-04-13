@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0–6 complete. EPIC 7 next.
+> **Status:** EPICs 0–7 complete. EPIC 8 in progress.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -369,7 +369,7 @@ Make MakerVault a durable technical knowledge store, not just an item register.
 
 ---
 
-# EPIC 7 — Projects and BOM foundations
+# EPIC 7 — Projects and BOM foundations ✅ COMPLETE
 
 ## Goal
 Model planned and completed builds, and connect them to inventory.
@@ -405,7 +405,25 @@ Model planned and completed builds, and connect them to inventory.
 
 ---
 
-# EPIC 8 — Search refinement and inventory usability
+# EPIC 8 — Search refinement and inventory usability ✅ COMPLETE
+
+## Goal
+Make the system genuinely efficient for real workshop use.
+
+## Completed
+- `PartAlias` ORM model with normalised alias storage and cascade FK to `parts`
+- Alembic migration `0004_part_aliases`
+- Part alias router (`GET/POST /parts/{id}/aliases`, `DELETE /parts/{id}/aliases/{alias_id}`)
+- Denormalised `Part.aliases` array kept in sync after every alias mutation
+- Search (`?q=`) now includes alias matching (via PartAlias subquery — cross-database compatible)
+- Tag-based array filter (`?tags[]=`) on `/parts` (PostgreSQL-only)
+- `StockItemResponse` enriched with `location_name` and `container_name` (resolved from DB)
+- Frontend: alias management section on Part detail page (add/remove aliases inline)
+- Frontend: Tags displayed on Part detail page
+- Frontend: Stock page shows part names (linked) and resolved placement paths
+- Frontend: Part detail stock table shows placement names instead of raw UUIDs
+- 19 new backend tests; all 123 tests passing
+- 10 frontend tests passing
 
 ## Goal
 Make the system genuinely efficient for real workshop use.

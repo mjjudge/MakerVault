@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { partsApi, stockApi, documentsApi, type Part, type StockItem, type PartDocumentLink } from '../api/client'
+import { partsApi, stockApi, documentsApi, type Part, type StockItem, type PartDocumentLink, type PartAlias } from '../api/client'
 import { DOCUMENT_TYPES, PART_DOC_RELATIONSHIPS, formatBytes } from '../utils/documents'
 
 export function PartDetailPage() {
@@ -15,6 +15,8 @@ export function PartDetailPage() {
   const [docFile, setDocFile] = useState<File | null>(null)
   const [docForm, setDocForm] = useState({ title: '', document_type: 'datasheet', relationship_type: 'primary_datasheet', is_primary: false, notes: '' })
   const [docUploadError, setDocUploadError] = useState('')
+  const [newAlias, setNewAlias] = useState('')
+  const [aliasError, setAliasError] = useState('')
 
   const { data: part, isLoading } = useQuery({
     queryKey: ['parts', id],
@@ -32,6 +34,33 @@ export function PartDetailPage() {
     queryKey: ['part-docs', id],
     queryFn: () => documentsApi.listForPart(id!),
     enabled: !!id,
+  })
+
+  const { data: aliases, refetch: refetchAliases } = useQuery({
+    queryKey: ['part-aliases', id],
+    queryFn: () => partsApi.listAliases(id!),
+    enabled: !!id,
+  })
+
+  const addAliasMutation = useMutation({
+    mutationFn: (alias: string) => partsApi.addAlias(id!, { alias }),
+    onSuccess: () => {
+      refetchAliases()
+      qc.invalidateQueries({ queryKey: ['parts', id] })
+      setNewAlias('')
+      setAliasError('')
+    },
+    onError: (err: any) => {
+      setAliasError(err?.response?.data?.detail ?? 'Failed to add alias')
+    },
+  })
+
+  const removeAliasMutation = useMutation({
+    mutationFn: (aliasId: string) => partsApi.removeAlias(id!, aliasId),
+    onSuccess: () => {
+      refetchAliases()
+      qc.invalidateQueries({ queryKey: ['parts', id] })
+    },
   })
 
   const unlinkDocMutation = useMutation({
@@ -194,6 +223,9 @@ export function PartDetailPage() {
                 ['Package', part.package_type ?? '—'],
                 ['Spec', part.spec_summary ?? '—'],
                 ['Notes', part.notes ?? '—'],
+                ['Tags', part.tags && part.tags.length > 0
+                  ? part.tags.join(', ')
+                  : '—'],
               ].map(([label, value]) => (
                 <tr key={label as string}>
                   <td style={{ fontWeight: 500, paddingRight: '2rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{label}</td>
@@ -229,14 +261,73 @@ export function PartDetailPage() {
                   <td style={{ fontWeight: 500 }}>{item.quantity}</td>
                   <td>{item.unit ?? part.default_unit}</td>
                   <td><span className={`badge badge-${item.status}`}>{item.status}</span></td>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#6b7280' }}>
-                    {item.container_id ?? item.location_id ?? '—'}
+                  <td>
+                    {item.container_name
+                      ? item.container_name
+                      : item.location_name
+                      ? item.location_name
+                      : item.container_id
+                      ? `ctr:${item.container_id.slice(0, 8)}…`
+                      : item.location_id
+                      ? `loc:${item.location_id.slice(0, 8)}…`
+                      : '—'}
                   </td>
                   <td>{item.supplier ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Tags & Aliases */}
+      <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2rem', marginBottom: '1rem' }}>Tags</h2>
+      {part.tags && part.tags.length > 0 ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+          {part.tags.map(tag => (
+            <span key={tag} className="badge badge-draft" style={{ fontSize: '0.8rem' }}>{tag}</span>
+          ))}
+        </div>
+      ) : (
+        <div className="empty" style={{ padding: '0.75rem 1.5rem', marginBottom: '1rem' }}>No tags.</div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '2rem', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+          Aliases ({aliases?.length ?? 0})
+        </h2>
+      </div>
+      {aliasError && <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>{aliasError}</div>}
+      <form
+        onSubmit={e => { e.preventDefault(); if (newAlias.trim()) addAliasMutation.mutate(newAlias.trim()) }}
+        style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}
+      >
+        <input
+          className="form-control"
+          placeholder="Add alias (e.g. ESP-WROOM-32)"
+          value={newAlias}
+          onChange={e => setNewAlias(e.target.value)}
+          style={{ maxWidth: '300px' }}
+        />
+        <button type="submit" className="btn btn-secondary btn-sm" disabled={addAliasMutation.isPending || !newAlias.trim()}>
+          {addAliasMutation.isPending ? 'Adding…' : '+ Add'}
+        </button>
+      </form>
+      {!aliases || aliases.length === 0 ? (
+        <div className="empty" style={{ padding: '1rem 1.5rem' }}>No aliases. Aliases let you find this part by alternate names.</div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+          {aliases.map((a: PartAlias) => (
+            <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.85rem' }}>
+              {a.alias}
+              <button
+                onClick={() => { if (confirm(`Remove alias "${a.alias}"?`)) removeAliasMutation.mutate(a.id) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.75rem', padding: 0, lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
         </div>
       )}
 

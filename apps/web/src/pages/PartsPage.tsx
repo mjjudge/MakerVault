@@ -61,7 +61,7 @@ export function PartsPage() {
         <input
           type="text"
           className="search-input"
-          placeholder="Search by name, code, manufacturer…"
+          placeholder="Search by name, code, manufacturer, alias…"
           value={q}
           onChange={e => setQ(e.target.value)}
         />

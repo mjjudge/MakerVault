@@ -21,7 +21,8 @@ a global part-search bar, and quick-access links to the main sections.
 **URL:** `/parts`
 
 Tabular view of all parts with columns for Part Code (linked to detail), Name, Kind, Manufacturer,
-Default Unit, and Status badge. Includes a live search bar and a "+ New Part" modal trigger.
+Default Unit, and Status badge. Includes a live search bar (searches name, code, manufacturer, and
+aliases) and a "+ New Part" modal trigger.
 
 ![Parts list](https://github.com/user-attachments/assets/77b2470c-68b6-4651-bedb-150e3cc54aae)
 
@@ -32,8 +33,9 @@ Default Unit, and Status badge. Includes a live search bar and a "+ New Part" mo
 **URL:** `/parts/:id`
 
 Detailed view for a single part. Shows all metadata fields (status, kind, description,
-manufacturer, MPN, package, spec, notes), the current stock items for that part,
-and an attached-documents section with an upload/link workflow.
+manufacturer, MPN, package, spec, tags, notes), the current stock items for that part
+with resolved placement names, an attached-documents section with an upload/link workflow,
+and an **Aliases** management panel where alternate names can be added or removed.
 
 ![Part detail — ESP32 DevKit V1](https://github.com/user-attachments/assets/98c93ce8-eff1-4366-b13c-62bdb3589e45)
 
@@ -72,3 +74,28 @@ set the required quantity, optional unit override, and notes before adding the e
 project BOM.
 
 ![Add Part to BOM dialog](https://github.com/user-attachments/assets/58ca7f1b-9f31-4da4-86d8-91656e4eaf05)
+
+---
+
+## 7. Part Aliases Panel (Epic 8)
+
+**URL:** `/parts/:id` (lower section)
+
+New in Epic 8 — each part now has an **Aliases** panel. Aliases are alternate names for
+the part (e.g. "ESP-WROOM-32" for an ESP32 board). Adding an alias makes the part
+discoverable by that term in the global search bar. Aliases can be added inline and removed
+with a single click.
+
+> Screenshot to be added after next deployment.
+
+---
+
+## 8. Stock Page — Resolved Placement Paths (Epic 8)
+
+**URL:** `/stock`
+
+New in Epic 8 — stock items now show the **resolved name** of their container or location
+instead of raw UUID fragments. The Part column now shows the part name as a clickable link
+to the part detail page.
+
+> Screenshot to be added after next deployment.
