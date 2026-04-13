@@ -10,6 +10,7 @@ import { ProjectsPage } from './pages/ProjectsPage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { AISettingsPage } from './pages/AISettingsPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
+import { UsageHistoryPage } from './pages/UsageHistoryPage'
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/ai" element={<AISettingsPage />} />
           <Route path="/suggestions" element={<SuggestionsPage />} />
+          <Route path="/history" element={<UsageHistoryPage />} />
         </Routes>
       </main>
     </div>

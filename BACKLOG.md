@@ -593,7 +593,7 @@ Deliver the distinctive MakerVault value: “what can I build with what I alread
 
 ---
 
-# EPIC 12 — Usage history and stock lifecycle
+# EPIC 12 — Usage history and stock lifecycle ✅ COMPLETE
 
 ## Goal
 Track what was used, consumed, returned, tested, or damaged over time.

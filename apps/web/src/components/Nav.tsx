@@ -30,6 +30,9 @@ export function Nav() {
       <NavLink to="/suggestions" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
         Inspire
       </NavLink>
+      <NavLink to="/history" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+        History
+      </NavLink>
     </nav>
   )
 }

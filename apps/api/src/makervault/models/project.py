@@ -35,6 +35,9 @@ class Project(TimestampMixin, Base):
     project_parts: Mapped[list["ProjectPart"]] = relationship(  # noqa: F821
         "ProjectPart", back_populates="project", cascade="all, delete-orphan"
     )
+    usage_history: Mapped[list["UsageHistory"]] = relationship(  # noqa: F821
+        "UsageHistory", back_populates="project", passive_deletes=True
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Project id={self.id} name={self.name!r}>"

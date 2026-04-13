@@ -82,7 +82,7 @@ This roadmap is broken into phases. Each phase should be functional and stable b
 - [ ] Semantic / vector search (pgvector or similar)
 - [ ] Bulk operations (move stock, update quantities)
 - [ ] Project status tracking and BOM completion view (using ProjectPart `is_owned`)
-- [ ] Usage history view per part or project (UsageHistory)
+- [x] Usage history view per part or project (UsageHistory)
 - [ ] Data export (JSON, CSV)
 - [ ] Performance and reliability hardening
 - [ ] Documentation review and user-facing help content

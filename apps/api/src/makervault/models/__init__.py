@@ -20,6 +20,7 @@ from makervault.models.project import Project
 from makervault.models.project_document import ProjectDocument
 from makervault.models.stock_item import StockItem
 from makervault.models.stock_item_document import StockItemDocument
+from makervault.models.usage_history import UsageHistory
 
 __all__ = [
     "AIProviderConfig",
@@ -35,4 +36,5 @@ __all__ = [
     "ProjectDocument",
     "StockItem",
     "StockItemDocument",
+    "UsageHistory",
 ]

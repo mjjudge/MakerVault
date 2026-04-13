@@ -126,3 +126,22 @@ records the *name* of the environment variable holding the API key — the key i
 never sent to or stored by the server.
 
 ![AI Settings — Add Provider modal](https://github.com/user-attachments/assets/ea21530f-3358-4acd-86ab-573a9a84c462)
+
+
+---
+
+## 11. Usage History (Epic 12)
+
+**URL:** `/history`
+
+New in Epic 12 — a dedicated **Usage History** page accessible from the global navigation bar.
+Lists all lifecycle events (allocated, used, returned, consumed, tested, damaged) with their
+timestamp, action badge, part name, quantity delta (showing `+`/`-`), linked project, and notes.
+
+Includes a **Record Event** form at the top with dropdowns for stock item and project, a quantity
+delta field, and free-text notes. Selecting a stock item with a non-zero `quantity_delta` automatically
+updates the stock item's stored quantity (e.g. consuming 3 units deducts 3 from the stock quantity).
+
+A filter bar lets you narrow events by action type.
+
+> Screenshot to be added after next deployment.
