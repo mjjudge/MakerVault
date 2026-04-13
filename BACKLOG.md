@@ -1,0 +1,616 @@
+# BACKLOG
+
+> **Status:** Initial working backlog. Ordered for pragmatic delivery, not completeness.  
+> **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
+
+---
+
+## Delivery principles
+
+- Build the smallest useful vertical slice first.
+- Keep the database as the source of truth.
+- Treat AI as a reasoning/enrichment layer, not an authority on owned stock.
+- Preserve important documents locally from the beginning.
+- Keep Docker as the primary runtime model.
+- Add tests as soon as a layer appears; do not leave them until “later”.
+- Prefer explicit, reviewable changes over clever abstractions.
+- Update docs when behaviour, architecture, or domain understanding changes.
+
+---
+
+## Testing strategy from day one
+
+Testing is a first-class concern in MakerVault.
+
+### Expectations
+- Every implementation epic should include test work.
+- New domain behaviour should have automated tests before or alongside implementation.
+- API endpoints should ship with request/response and validation tests.
+- Regressions in search, placement, and document linkage should be covered early.
+- AI-facing features should be tested for grounding and orchestration, not model creativity.
+
+### Initial test layers
+- **Unit tests** for domain logic, validation, helpers, and service functions
+- **Integration tests** for database persistence, migrations, and API/database interaction
+- **API tests** for endpoint contracts
+- **End-to-end tests** for a small number of critical workflows once the UI exists
+
+### Early priorities
+- Part vs StockItem separation
+- Location vs Container placement rules
+- Document linking rules
+- Quantity/unit handling
+- Search behaviour
+- Migration safety for the initial schema
+
+---
+
+## Current proposed implementation order
+
+1. Repo conventions and backlog
+2. Docker runtime scaffold
+3. Core schema and migrations
+4. Basic API and tests
+5. Basic web UI and end-to-end smoke tests
+6. Document storage and linking
+7. Projects and BOM
+8. AI provider abstraction
+9. AI-assisted workflows
+10. Refinement, imports, scanning, mobile-friendly workflows
+
+---
+
+# EPIC 0 — Working conventions and delivery foundation
+
+## Goal
+Make the repository execution-ready so future work is consistent, reviewable, and testable.
+
+## Scope
+- Finalise backlog
+- Align docs with current product direction
+- Add explicit testing expectations to repo guidance
+- Define basic contribution and decision-making conventions
+- Ensure terminology is consistent across docs
+
+## Tasks
+- Create `BACKLOG.md`
+- Update `AGENTS.md` to require tests with behaviour changes
+- Add a short testing section to `README.md`
+- Review `DATA_MODEL.md` for final conceptual fixes
+- Add a “likely uniqueness rules” subsection to the data model
+- Add `ProjectDocument` to the conceptual model
+- Clarify `ProjectPart.is_owned` as derived/cache or remove it
+- Clarify stock placement rules
+- Clarify denormalised alias handling
+
+## Acceptance criteria
+- Repo has a clear backlog and execution order
+- Docs use consistent domain language
+- Testing is explicitly expected from the first implementation epic
+- No doc implies that implementation already exists
+
+## Tests
+- No code tests yet required
+- Documentation review checklist completed
+
+---
+
+# EPIC 1 — Docker runtime scaffold
+
+## Goal
+Establish Docker Compose as the primary way to run MakerVault locally and on the Ubuntu host.
+
+## Scope
+- Compose-based scaffold only
+- No real application logic yet
+- Persistent storage paths established early
+
+## Tasks
+- Add `infra/docker/docker-compose.yml`
+- Add `.env.example`
+- Define placeholder services:
+  - `api`
+  - `web`
+  - `worker`
+  - `postgres`
+  - `nginx`
+- Define persistent volumes for:
+  - Postgres data
+  - MakerVault document storage
+- Document startup flow in `README.md`
+- Document runtime shape in `ARCHITECTURE.md` and `TECHNICAL_SPEC.md`
+
+## Acceptance criteria
+- `docker compose up` works with placeholder services
+- Document storage is treated as persistent first-class state
+- Runtime architecture is documented clearly
+- No local non-Docker workflow is assumed as primary
+
+## Tests
+- Add a minimal verification script or documented smoke-check workflow
+- Optional: basic container healthcheck placeholders where sensible
+
+---
+
+# EPIC 2 — Backend foundation and test harness
+
+## Goal
+Create the backend project skeleton with testing and migration foundations before business features.
+
+## Scope
+- API placeholder app
+- database connection foundation
+- migration tooling
+- test harness
+- no rich business logic yet
+
+## Tasks
+- Create backend project structure under `apps/api`
+- Add dependency management
+- Add test framework
+- Add migration tooling
+- Add database settings/config pattern
+- Add test database strategy
+- Add CI-ready local test commands, even if CI is not added yet
+- Add a basic health endpoint
+
+## Acceptance criteria
+- Backend app starts in Docker
+- Tests can be run locally in a repeatable way
+- Migrations can be created and applied
+- Health endpoint responds successfully
+
+## Tests
+- Health endpoint test
+- Database connectivity integration test
+- Config loading test
+- Migration smoke test
+
+---
+
+# EPIC 3 — Core domain schema: inventory foundations
+
+## Goal
+Implement the first real domain slice for inventory and placement.
+
+## Scope
+Initial schema and persistence for:
+- Category
+- Part
+- StockItem
+- Location
+- Container
+
+## Tasks
+- Create initial migrations
+- Implement ORM/domain models
+- Add constraints and indexes
+- Implement placement rules
+- Support nested locations and containers
+- Support direct stock placement and container placement
+- Add basic seed/dev data helpers if useful
+
+## Acceptance criteria
+- Parts can exist independently of stock
+- StockItems must resolve to a physical placement
+- Locations can be hierarchical
+- Containers can be nested
+- A Part can have multiple StockItems in different places
+- Schema reflects the conceptual model closely enough to proceed
+
+## Tests
+- Part creation test
+- StockItem creation test
+- Validation test for invalid placement
+- Nested container placement test
+- Location hierarchy test
+- Constraint/index smoke tests
+- Migration round-trip test
+
+---
+
+# EPIC 4 — Basic API: parts, stock, locations, containers
+
+## Goal
+Expose the inventory foundation through a practical REST API.
+
+## Scope
+CRUD and list/search APIs for:
+- parts
+- stock items
+- locations
+- containers
+- categories
+
+## Tasks
+- Define REST routes
+- Implement create/read/update/list endpoints
+- Add validation schemas
+- Add basic filtering
+- Add pagination
+- Add simple text search over parts
+- Add placement-aware stock retrieval
+
+## Acceptance criteria
+- A user can create and query Parts
+- A user can create StockItems and place them physically
+- A user can browse location/container hierarchy
+- API validation errors are clear and consistent
+- OpenAPI/docs are available if supported by the framework
+
+## Tests
+- Endpoint tests for create/read/update/list
+- Validation failure tests
+- Filtering and pagination tests
+- Search tests
+- Placement resolution tests
+- Database integration tests for core endpoints
+
+---
+
+# EPIC 5 — Basic web UI: search-first inventory workflow
+
+## Goal
+Deliver the first usable interface.
+
+## Scope
+- Search-first homepage
+- Part detail page
+- Stock item detail/edit page
+- Location/container browser
+- Simple creation/edit workflows
+
+## Tasks
+- Create frontend scaffold under `apps/web`
+- Implement search-first landing view
+- Implement basic navigation
+- Implement part list/detail views
+- Implement stock placement views
+- Implement location/container browsing
+- Keep UI fast, plain, and practical
+
+## Acceptance criteria
+- A user can search for a part by name or tag
+- A user can see where matching stock is stored
+- A user can browse from location to nested container to stock
+- A user can create and edit basic records through the UI
+
+## Tests
+- Component/unit tests for core views
+- API mocking tests where appropriate
+- End-to-end smoke tests for:
+  - create part
+  - create stock item
+  - assign placement
+  - search and find location
+
+---
+
+# EPIC 6 — Documents and local knowledge capture
+
+## Goal
+Make MakerVault a durable technical knowledge store, not just an item register.
+
+## Scope
+- Document entity
+- local file storage
+- document upload
+- document linking
+- extracted text placeholder pipeline
+- project document support
+
+## Tasks
+- Implement `Document`
+- Implement `PartDocument`
+- Implement `StockItemDocument`
+- Implement `ProjectDocument`
+- Add upload/storage flow
+- Store checksums and metadata
+- Add extracted text field handling
+- Add basic document list/view UI
+- Link documents to parts, stock items, and projects
+
+## Acceptance criteria
+- A document can be uploaded and stored locally
+- A document can be linked to a Part
+- A document can be linked to a StockItem
+- A document can be linked to a Project
+- Document metadata is queryable
+- Local document persistence is stable across restarts
+
+## Tests
+- Upload/storage integration test
+- Checksum test
+- Document-linking tests
+- File metadata persistence test
+- API tests for upload and association
+- UI smoke test for attaching and viewing a document
+
+---
+
+# EPIC 7 — Projects and BOM foundations
+
+## Goal
+Model planned and completed builds, and connect them to inventory.
+
+## Scope
+- Project
+- ProjectPart
+- basic BOM availability logic
+- usage-ready structure
+
+## Tasks
+- Implement project schema and endpoints
+- Implement BOM entry schema and endpoints
+- Add availability calculation from stock
+- Mark `is_owned` as derived/cache if retained
+- Add project detail UI
+- Add linked parts view
+- Add missing-vs-owned BOM summary
+
+## Acceptance criteria
+- A project can be created
+- Parts can be added to a BOM
+- The system can report whether required parts appear to be in stock
+- Projects can link to supporting documents
+- A user can inspect a project and see candidate owned parts
+
+## Tests
+- Project CRUD tests
+- BOM entry tests
+- Availability calculation tests
+- Document linkage tests for projects
+- End-to-end test for creating a project and adding parts
+
+---
+
+# EPIC 8 — Search refinement and inventory usability
+
+## Goal
+Make the system genuinely efficient for real workshop use.
+
+## Scope
+- improved search
+- alias support
+- capability-aware filtering
+- better placement navigation
+- quantity/unit edge cases
+
+## Tasks
+- Implement `PartAlias`
+- Add denormalised alias search support
+- Improve full-text and fuzzy search
+- Add capability-aware filtering groundwork
+- Improve display of resolved placement paths
+- Handle countable vs measured stock more cleanly
+
+## Acceptance criteria
+- A user can find parts via common names and alternate names
+- Search results are useful with partial/fuzzy terms
+- Placement paths are displayed clearly
+- Basic capability filtering is feasible from stored data
+
+## Tests
+- Alias search tests
+- Fuzzy/full-text search tests
+- Placement path rendering tests
+- Quantity/unit logic tests
+- Regression tests for search ranking assumptions where practical
+
+---
+
+# EPIC 9 — AI provider abstraction
+
+## Goal
+Introduce AI in a provider-agnostic way without hard-coding one model vendor.
+
+## Scope
+- provider config
+- provider interface/contracts
+- grounded orchestration layer
+- one hosted provider adapter
+- one local/OpenAI-compatible adapter
+
+## Tasks
+- Implement `AIProviderConfig`
+- Define internal interfaces for:
+  - chat/reasoning
+  - document summarisation
+  - metadata extraction
+  - project suggestion
+  - embeddings later if needed
+- Implement provider selection/config loading
+- Add one hosted adapter
+- Add one local/OpenAI-compatible adapter
+- Ensure secrets remain outside the database
+
+## Acceptance criteria
+- AI providers can be configured without changing business logic
+- The app can select an enabled provider for a task
+- Grounded context can be passed into AI workflows
+- The abstraction does not assume one permanent provider
+
+## Tests
+- Provider config tests
+- Adapter contract tests
+- Mocked orchestration tests
+- Failure/fallback tests
+- Tests confirming no secrets are persisted in DB records
+
+---
+
+# EPIC 10 — AI enrichment and document understanding
+
+## Goal
+Use AI to enrich stored records and preserved technical documents.
+
+## Scope
+- enrichment jobs
+- document summarisation
+- metadata extraction
+- alias generation
+- capability extraction
+
+## Tasks
+- Implement `EnrichmentJob`
+- Add worker jobs for:
+  - summarise document
+  - extract metadata
+  - generate aliases
+  - classify part
+- Store structured results and provenance
+- Add review workflow for low-confidence outputs
+- Add UI surfaces for enrichment results
+
+## Acceptance criteria
+- Documents can be enriched asynchronously
+- Results are stored with traceability
+- AI-generated outputs are reviewable
+- Extracted capabilities and aliases can improve search and part detail
+
+## Tests
+- Job lifecycle tests
+- Worker integration tests
+- Provenance and confidence tests
+- Mocked AI result parsing tests
+- Failure/retry tests
+
+---
+
+# EPIC 11 — AI-assisted project inspiration and grounded workflows
+
+## Goal
+Deliver the distinctive MakerVault value: “what can I build with what I already own?”
+
+## Scope
+- grounded project suggestions
+- parts-for-idea matching
+- BOM suggestion using available stock
+- “where do I find the suggested parts?” flows
+
+## Tasks
+- Add idea-to-parts workflow
+- Add inventory-grounded project suggestion workflow
+- Add suggestion output linking back to stock and docs
+- Add “missing parts” identification
+- Add “owned parts and where they are” output
+- Add UI for project suggestion prompts/results
+
+## Acceptance criteria
+- A user can ask for a project idea using owned parts
+- Suggestions cite relevant parts/documents/projects
+- The system can distinguish owned vs missing components
+- Suggestions are traceable back to grounded records
+
+## Tests
+- Orchestration tests with mocked AI providers
+- Grounding tests ensuring inventory context is included
+- Output parsing/validation tests
+- End-to-end test for a basic suggestion flow with fake provider output
+
+---
+
+# EPIC 12 — Usage history and stock lifecycle
+
+## Goal
+Track what was used, consumed, returned, tested, or damaged over time.
+
+## Scope
+- UsageHistory
+- stock lifecycle events
+- quantity changes
+- project-linked usage
+
+## Tasks
+- Implement `UsageHistory`
+- Add allocation/consumption flows
+- Add manual movement and status changes
+- Add project-linked usage recording
+- Add audit-style views for item history
+
+## Acceptance criteria
+- Stock changes can be recorded with context
+- Usage can be linked to a project
+- Consumables can decrement meaningfully
+- A user can inspect stock history
+
+## Tests
+- Quantity delta tests
+- Lifecycle action tests
+- Project-linked usage tests
+- Audit history retrieval tests
+
+---
+
+# EPIC 13 — Imports, labels, and operational polish
+
+## Goal
+Reduce friction for real-world usage and maintenance.
+
+## Scope
+- CSV import/export
+- label and barcode readiness
+- bulk moves
+- basic admin utilities
+- mobile-friendly improvements
+
+## Tasks
+- Add import/export formats
+- Add label code support through the UI
+- Add bulk relocation workflow
+- Add duplicate detection helpers
+- Improve small-screen usability
+- Add backup/restore guidance for DB + document store
+
+## Acceptance criteria
+- A user can import a batch of parts or stock
+- A user can export core data
+- Containers can be labelled and moved in bulk
+- Backup guidance is documented and practical
+
+## Tests
+- Import validation tests
+- Export format tests
+- Bulk move tests
+- Mobile UI smoke tests where practical
+
+---
+
+## Not now
+
+Deliberately not in the early roadmap:
+
+- e-commerce ordering flows
+- marketplace integrations
+- enterprise permissions model
+- automated image-based part recognition
+- CAD/schematic editing
+- manufacturing ERP complexity
+- autonomous AI changing inventory without confirmation
+- Kubernetes or distributed microservice architecture
+
+---
+
+## Suggested first usable release definition
+
+A good first meaningful release is:
+
+- create Parts
+- create StockItems
+- create nested Locations and Containers
+- place stock physically
+- search for a part and see where it is
+- upload and link a document locally
+- create a Project with BOM entries
+- run everything in Docker
+- run automated tests locally with confidence
+
+---
+
+## Immediate next actions
+
+1. Finalise `DATA_MODEL.md` with the small conceptual edits
+2. Add this backlog to the repo
+3. Lock in Docker scaffold expectations
+4. Start EPIC 2 and EPIC 3 in thin slices
+5. Require tests in every implementation PR from the start
