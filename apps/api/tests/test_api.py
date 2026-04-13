@@ -119,6 +119,70 @@ async def api_engine():
                 )
             )
         """))
+        await conn.execute(text("""
+            CREATE TABLE documents (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                document_type TEXT NOT NULL DEFAULT 'other',
+                source_type TEXT NOT NULL DEFAULT 'uploaded',
+                source_url TEXT,
+                local_path TEXT,
+                mime_type TEXT,
+                checksum TEXT,
+                file_size_bytes INTEGER,
+                text_extracted TEXT,
+                summary TEXT,
+                version_label TEXT,
+                metadata_json TEXT,
+                notes TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'active',
+                notes TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE part_documents (
+                id TEXT PRIMARY KEY,
+                part_id TEXT NOT NULL REFERENCES parts(id),
+                document_id TEXT NOT NULL REFERENCES documents(id),
+                relationship_type TEXT NOT NULL DEFAULT 'other',
+                is_primary INTEGER NOT NULL DEFAULT 0,
+                notes TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE stock_item_documents (
+                id TEXT PRIMARY KEY,
+                stock_item_id TEXT NOT NULL REFERENCES stock_items(id),
+                document_id TEXT NOT NULL REFERENCES documents(id),
+                notes TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE project_documents (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL REFERENCES projects(id),
+                document_id TEXT NOT NULL REFERENCES documents(id),
+                relationship_type TEXT NOT NULL DEFAULT 'other',
+                notes TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     yield engine
     await engine.dispose()
 

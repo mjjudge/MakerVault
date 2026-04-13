@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0–5 complete. EPIC 6 next.
+> **Status:** EPICs 0–6 complete. EPIC 7 next.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -327,7 +327,7 @@ Deliver the first usable interface.
 
 ---
 
-# EPIC 6 — Documents and local knowledge capture
+# EPIC 6 — Documents and local knowledge capture ✅ COMPLETE
 
 ## Goal
 Make MakerVault a durable technical knowledge store, not just an item register.

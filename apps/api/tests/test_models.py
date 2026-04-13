@@ -430,5 +430,8 @@ async def test_part_can_have_multiple_stock_items(sess) -> None:
 
 @pytest.mark.asyncio
 async def test_models_importable() -> None:
-    """All EPIC 3 models should be importable without error."""
-    from makervault.models import Category, Container, Location, Part, StockItem  # noqa: F401
+    """All models should be importable without error."""
+    from makervault.models import (  # noqa: F401
+        Category, Container, Location, Part, StockItem,
+        Document, PartDocument, StockItemDocument, Project, ProjectDocument,
+    )

@@ -108,6 +108,9 @@ class Part(TimestampMixin, Base):
     stock_items: Mapped[list["StockItem"]] = relationship(  # noqa: F821
         "StockItem", back_populates="part"
     )
+    document_links: Mapped[list["PartDocument"]] = relationship(  # noqa: F821
+        "PartDocument", back_populates="part", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Part id={self.id} part_code={self.part_code!r} name={self.name!r}>"

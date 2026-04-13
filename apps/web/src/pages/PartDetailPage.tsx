@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { partsApi, stockApi, type Part, type StockItem } from '../api/client'
+import { partsApi, stockApi, documentsApi, type Part, type StockItem, type PartDocumentLink } from '../api/client'
+import { DOCUMENT_TYPES, PART_DOC_RELATIONSHIPS, formatBytes } from '../utils/documents'
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -10,6 +11,10 @@ export function PartDetailPage() {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<Part>>({})
   const [error, setError] = useState('')
+  const [showDocUpload, setShowDocUpload] = useState(false)
+  const [docFile, setDocFile] = useState<File | null>(null)
+  const [docForm, setDocForm] = useState({ title: '', document_type: 'datasheet', relationship_type: 'primary_datasheet', is_primary: false, notes: '' })
+  const [docUploadError, setDocUploadError] = useState('')
 
   const { data: part, isLoading } = useQuery({
     queryKey: ['parts', id],
@@ -22,6 +27,49 @@ export function PartDetailPage() {
     queryFn: () => stockApi.list({ part_id: id!, limit: 50 }),
     enabled: !!id,
   })
+
+  const { data: partDocs, refetch: refetchDocs } = useQuery({
+    queryKey: ['part-docs', id],
+    queryFn: () => documentsApi.listForPart(id!),
+    enabled: !!id,
+  })
+
+  const unlinkDocMutation = useMutation({
+    mutationFn: (linkId: string) => documentsApi.unlinkFromPart(id!, linkId),
+    onSuccess: () => refetchDocs(),
+  })
+
+  const uploadAndLinkMutation = useMutation({
+    mutationFn: async (fd: FormData) => {
+      const doc = await documentsApi.upload(fd)
+      return documentsApi.linkToPart(id!, {
+        document_id: doc.id,
+        relationship_type: docForm.relationship_type,
+        is_primary: docForm.is_primary,
+        notes: docForm.notes || undefined,
+      })
+    },
+    onSuccess: () => {
+      refetchDocs()
+      setShowDocUpload(false)
+      setDocFile(null)
+      setDocForm({ title: '', document_type: 'datasheet', relationship_type: 'primary_datasheet', is_primary: false, notes: '' })
+      setDocUploadError('')
+    },
+    onError: (err: any) => {
+      setDocUploadError(err?.response?.data?.detail ?? 'Upload failed')
+    },
+  })
+
+  const handleDocUpload = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!docFile) { setDocUploadError('Please select a file.'); return }
+    const fd = new FormData()
+    fd.append('file', docFile)
+    fd.append('title', docForm.title || docFile.name)
+    fd.append('document_type', docForm.document_type)
+    uploadAndLinkMutation.mutate(fd)
+  }
 
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<Part>) => partsApi.update(id!, payload),
@@ -185,6 +233,107 @@ export function PartDetailPage() {
                     {item.container_id ?? item.location_id ?? '—'}
                   </td>
                   <td>{item.supplier ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Documents for this part */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '2rem', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+          Documents ({partDocs?.length ?? 0})
+        </h2>
+        <button className="btn btn-secondary btn-sm" onClick={() => setShowDocUpload(true)}>
+          + Attach Document
+        </button>
+      </div>
+
+      {showDocUpload && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Attach Document</h2>
+              <button className="modal-close" onClick={() => { setShowDocUpload(false); setDocUploadError('') }}>✕</button>
+            </div>
+            {docUploadError && <div className="alert alert-error">{docUploadError}</div>}
+            <form onSubmit={handleDocUpload}>
+              <div className="form-group">
+                <label className="form-label">File *</label>
+                <input type="file" className="form-control" onChange={e => setDocFile(e.target.files?.[0] ?? null)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Title</label>
+                <input className="form-control" placeholder="Leave blank to use filename" value={docForm.title} onChange={e => setDocForm(f => ({ ...f, title: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Document type</label>
+                <select className="form-control" value={docForm.document_type} onChange={e => setDocForm(f => ({ ...f, document_type: e.target.value }))}>
+                  {DOCUMENT_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Relationship</label>
+                <select className="form-control" value={docForm.relationship_type} onChange={e => setDocForm(f => ({ ...f, relationship_type: e.target.value }))}>
+                  {PART_DOC_RELATIONSHIPS.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input type="checkbox" checked={docForm.is_primary} onChange={e => setDocForm(f => ({ ...f, is_primary: e.target.checked }))} />
+                  Primary document
+                </label>
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={uploadAndLinkMutation.isPending}>
+                  {uploadAndLinkMutation.isPending ? 'Uploading…' : 'Upload & Attach'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowDocUpload(false); setDocUploadError('') }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {!partDocs || partDocs.length === 0 ? (
+        <div className="empty" style={{ padding: '1.5rem' }}>No documents attached to this part.</div>
+      ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Relationship</th>
+                <th>Size</th>
+                <th>Checksum</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {partDocs.map((link: PartDocumentLink) => (
+                <tr key={link.id}>
+                  <td style={{ fontWeight: 500 }}>
+                    {link.document.title}
+                    {link.is_primary && (
+                      <span style={{ marginLeft: '0.4rem', color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>★ primary</span>
+                    )}
+                  </td>
+                  <td><span className="badge badge-draft">{link.document.document_type.replace(/_/g, ' ')}</span></td>
+                  <td style={{ fontSize: '0.85rem', color: '#6b7280' }}>{link.relationship_type.replace(/_/g, ' ')}</td>
+                  <td style={{ fontSize: '0.85rem' }}>{formatBytes(link.document.file_size_bytes)}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#6b7280' }}>
+                    {link.document.checksum ? link.document.checksum.slice(0, 12) + '…' : '—'}
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => { if (confirm('Remove this document link?')) unlinkDocMutation.mutate(link.id) }}
+                    >
+                      Remove
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
