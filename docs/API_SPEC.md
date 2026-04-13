@@ -17,6 +17,17 @@
 
 ## Resource groups
 
+### Categories
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/v1/categories` | List all categories (tree or flat) |
+| POST | `/api/v1/categories` | Create a category |
+| GET | `/api/v1/categories/{id}` | Get a category |
+| PATCH | `/api/v1/categories/{id}` | Update a category |
+| DELETE | `/api/v1/categories/{id}` | Delete a category |
+| GET | `/api/v1/categories/{id}/parts` | List parts in a category |
+
 ### Parts
 
 | Method | Path | Description |
@@ -27,8 +38,17 @@
 | PATCH | `/api/v1/parts/{id}` | Update a part |
 | DELETE | `/api/v1/parts/{id}` | Delete a part |
 | GET | `/api/v1/parts/{id}/stock` | List all stock items for a part |
-| GET | `/api/v1/parts/{id}/documents` | List documents attached to a part |
+| GET | `/api/v1/parts/{id}/documents` | List documents attached to a part (via PartDocument) |
+| POST | `/api/v1/parts/{id}/documents` | Attach an existing document to a part |
+| DELETE | `/api/v1/parts/{id}/documents/{document_id}` | Detach a document from a part |
 | GET | `/api/v1/parts/{id}/projects` | List projects that use this part |
+| GET | `/api/v1/parts/{id}/aliases` | List aliases for a part |
+| POST | `/api/v1/parts/{id}/aliases` | Add an alias to a part |
+| DELETE | `/api/v1/parts/{id}/aliases/{alias_id}` | Remove an alias |
+| GET | `/api/v1/parts/{id}/capabilities` | List capabilities for a part |
+| POST | `/api/v1/parts/{id}/capabilities` | Add a capability to a part |
+| PATCH | `/api/v1/parts/{id}/capabilities/{capability_id}` | Update a capability |
+| DELETE | `/api/v1/parts/{id}/capabilities/{capability_id}` | Remove a capability |
 
 ### Stock
 
@@ -39,8 +59,11 @@
 | GET | `/api/v1/stock/{id}` | Get a stock item |
 | PATCH | `/api/v1/stock/{id}` | Update a stock item (quantity, condition, location) |
 | DELETE | `/api/v1/stock/{id}` | Remove a stock item |
-| POST | `/api/v1/stock/{id}/move` | Move a stock item to a different container |
+| POST | `/api/v1/stock/{id}/move` | Move a stock item to a different container or location |
 | GET | `/api/v1/stock/{id}/history` | Get usage history for a stock item |
+| GET | `/api/v1/stock/{id}/documents` | List documents attached to a stock item (via StockItemDocument) |
+| POST | `/api/v1/stock/{id}/documents` | Attach an existing document to a stock item |
+| DELETE | `/api/v1/stock/{id}/documents/{document_id}` | Detach a document from a stock item |
 
 ### Locations
 
@@ -96,11 +119,12 @@
 | POST | `/api/v1/ai/query` | Natural language query grounded in inventory |
 | POST | `/api/v1/ai/suggest-projects` | Request project suggestions based on owned inventory |
 | POST | `/api/v1/ai/enrich-part/{id}` | Trigger AI enrichment for a specific part |
+| POST | `/api/v1/ai/embed-document/{id}` | Trigger document embedding/indexing job |
 | GET | `/api/v1/ai/providers` | List configured AI providers |
 | POST | `/api/v1/ai/providers` | Add an AI provider configuration |
 | PATCH | `/api/v1/ai/providers/{id}` | Update a provider configuration |
 | DELETE | `/api/v1/ai/providers/{id}` | Remove a provider configuration |
-| POST | `/api/v1/ai/providers/{id}/activate` | Set the active provider |
+| POST | `/api/v1/ai/providers/{id}/activate` | Set the active provider (by task scope) |
 | GET | `/api/v1/ai/providers/{id}/health` | Check connectivity to a provider |
 
 ### Search
