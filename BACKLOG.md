@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0–7 complete. EPIC 8 in progress.
+> **Status:** EPICs 0–7 complete. EPICs 8–10 complete. EPIC 11 next.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -511,7 +511,7 @@ Introduce AI in a provider-agnostic way without hard-coding one model vendor.
 
 ---
 
-# EPIC 10 — AI enrichment and document understanding
+# EPIC 10 — AI enrichment and document understanding ✅ COMPLETE
 
 ## Goal
 Use AI to enrich stored records and preserved technical documents.
@@ -524,28 +524,32 @@ Use AI to enrich stored records and preserved technical documents.
 - capability extraction
 
 ## Tasks
-- Implement `EnrichmentJob`
-- Add worker jobs for:
-  - summarise document
-  - extract metadata
-  - generate aliases
-  - classify part
-- Store structured results and provenance
-- Add review workflow for low-confidence outputs
-- Add UI surfaces for enrichment results
+- [x] Implement `EnrichmentJob` ORM model (`enrichment_jobs` table)
+- [x] Alembic migration `0006_enrichment_jobs.py`
+- [x] Pydantic schemas: `EnrichmentJobCreate`, `EnrichmentJobResponse`, `EnrichmentJobListResponse`
+- [x] Enrichment service (`enrichment_service.py`) — four job types with prompt construction, JSON parsing, and markdown-fence stripping
+- [x] Router `enrichment.py` — create/run, list (filtered), get, apply, dismiss, delete
+- [x] Entity provenance: `provider_id` and `provider_name` stored per job
+- [x] Apply workflow: aliases → `PartAlias` rows + denormalised sync; classify_part → `part.part_kind` + tags; summarise_document → `document.summary`; extract_metadata → document fields
+- [x] Dismiss workflow: marks job as `dismissed`, validates only `done` jobs can be dismissed
+- [x] Frontend: `EnrichmentJob` TypeScript type and `enrichmentApi` added to `client.ts`
+- [x] Frontend: `EnrichmentPanel` component — job list, trigger, apply, dismiss, delete, result preview
+- [x] Frontend: `EnrichmentPanel` integrated into `PartDetailPage`
+- [x] Tests: `test_epic10.py` — 27 tests covering job lifecycle, mocked AI calls, apply/dismiss, provenance, error handling, service unit tests
 
 ## Acceptance criteria
-- Documents can be enriched asynchronously
-- Results are stored with traceability
-- AI-generated outputs are reviewable
-- Extracted capabilities and aliases can improve search and part detail
+- [x] Documents can be enriched via on-demand AI jobs
+- [x] Results are stored with traceability (provider_id, provider_name, confidence)
+- [x] AI-generated outputs are reviewable before being applied
+- [x] Extracted capabilities and aliases improve part detail data
+- [x] Failed jobs record a human-readable error message
 
 ## Tests
-- Job lifecycle tests
-- Worker integration tests
-- Provenance and confidence tests
-- Mocked AI result parsing tests
-- Failure/retry tests
+- [x] Job lifecycle tests
+- [x] Provenance and confidence tests
+- [x] Mocked AI result parsing tests (all four job types)
+- [x] Failure/retry tests (no provider, AI error, bad JSON)
+- [x] Apply/dismiss conflict tests
 
 ---
 

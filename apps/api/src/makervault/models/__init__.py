@@ -11,6 +11,7 @@ from makervault.models.ai_provider_config import AIProviderConfig
 from makervault.models.category import Category
 from makervault.models.container import Container
 from makervault.models.document import Document
+from makervault.models.enrichment_job import EnrichmentJob
 from makervault.models.location import Location
 from makervault.models.part import Part
 from makervault.models.part_alias import PartAlias
@@ -25,6 +26,7 @@ __all__ = [
     "Category",
     "Container",
     "Document",
+    "EnrichmentJob",
     "Location",
     "Part",
     "PartAlias",

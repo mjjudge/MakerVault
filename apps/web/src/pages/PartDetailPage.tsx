@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { partsApi, stockApi, documentsApi, type Part, type StockItem, type PartDocumentLink, type PartAlias } from '../api/client'
 import { DOCUMENT_TYPES, PART_DOC_RELATIONSHIPS, formatBytes } from '../utils/documents'
+import { EnrichmentPanel } from '../components/EnrichmentPanel'
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -431,6 +432,19 @@ export function PartDetailPage() {
           </table>
         </div>
       )}
+
+      {/* AI Enrichment */}
+      <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2rem', marginBottom: '1rem' }}>
+        AI Enrichment
+      </h2>
+      <EnrichmentPanel
+        entityType="part"
+        entityId={id!}
+        onApplied={() => {
+          qc.invalidateQueries({ queryKey: ['parts', id] })
+          qc.invalidateQueries({ queryKey: ['part-aliases', id] })
+        }}
+      />
     </div>
   )
 }
