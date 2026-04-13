@@ -6,205 +6,468 @@ This document describes the core entities in MakerVault and their relationships.
 
 ---
 
-## Entities overview
+## Modelling principles
+
+MakerVault separates five fundamental concerns:
+
+| Concern | Entity |
+|---|---|
+| *What a thing is* | **Part** |
+| *What you physically own* | **StockItem** |
+| *Where it is* | **Location** |
+| *What contains it* | **Container** |
+| *What documents describe it* | **Document** (via join tables) |
+| *What projects use it* | **Project** / **ProjectPart** |
+
+This clean separation is the foundation that makes search, BOM generation, AI grounding, duplicate detection, and "where is it?" queries tractable. **Do not collapse these concerns into a single vague "item" table.**
+
+---
+
+## Entity overview
 
 ```
-Part ──< StockItem >── Container ──> Location
- │            │
- │            └──< UsageHistory
- │
- └──< Document
- └──< ProjectPart >── Project
-                         └──< Document
+Category ──< Part ──< StockItem >──┬── Container ──> Location
+               │           │       └── Location
+               │           └──< UsageHistory
+               │           └──< StockItemDocument >── Document
+               │
+               ├──< PartDocument >── Document
+               ├──< PartAlias
+               ├──< Capability
+               └──< ProjectPart >── Project
+                                        └──< UsageHistory
 
-AIProviderConfig
-EnrichmentJob
+AIProviderConfig ──< EnrichmentJob
 ```
 
 ---
 
-## Part
+## Core entities
 
-A **Part** is the definition of a type of component, board, tool, or device. It describes *what something is*, not a specific owned unit.
+### Category
 
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `name` | Common name (e.g. "ESP32-WROOM-32") |
-| `manufacturer` | Manufacturer name |
-| `mpn` | Manufacturer part number |
-| `description` | Free-text description |
-| `category` | e.g. microcontroller, sensor, passive, tool, consumable |
-| `tags` | Array of searchable tags (e.g. "I2C", "WiFi", "3.3V") |
-| `datasheet_url` | Original upstream URL (may be dead; local copy is in Document) |
-| `notes` | Free-text notes |
-| `created_at` | Timestamp |
-| `updated_at` | Timestamp |
+A **Category** provides a hierarchical taxonomy for Parts. Categories are stored in a separate table (not hard-coded as an enum) so they can grow over time.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `name` | text | Display name (e.g. "Sensors", "Temperature") |
+| `parent_category_id` | UUID | Self-reference for nested categories (nullable) |
+| `description` | text | Optional description |
+| `sort_order` | integer | Optional display ordering |
+
+Example category tree: Sensors → Temperature, Sensors → Motion, Actuators, Microcontrollers, Single-board Computers, Power, Tools, Consumables.
 
 ---
 
-## StockItem
+### Part
 
-A **StockItem** represents one or more physical units of a Part that are actually owned. A single Part may have multiple StockItems (e.g. units in different locations, or units with different serial numbers).
+A **Part** is the canonical definition of a type of component, board, module, tool, or device. It describes *what something is* in the abstract — not a specific physical unit you own.
 
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `part_id` | Foreign key → Part |
-| `container_id` | Foreign key → Container (nullable if location is approximate) |
-| `quantity` | Number of units at this location |
-| `serial_number` | Optional serial number for trackable devices |
-| `condition` | e.g. new, used, faulty, untested |
-| `purchase_date` | Date of purchase |
-| `purchase_price` | Price paid (for reference) |
-| `supplier` | Supplier name |
-| `supplier_order_ref` | Order or invoice reference |
-| `notes` | Free-text notes |
-| `created_at` | Timestamp |
-| `updated_at` | Timestamp |
+> **A Part is not "the ESP32 in Box B." A Part is "ESP32 DevKit V1" as a type.**
 
----
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `part_code` | text | Internal unique code |
+| `name` | text | Common name (e.g. "ESP32 DevKit V1") |
+| `short_description` | text | One-line summary |
+| `long_description` | text | Extended free-text description |
+| `category_id` | UUID | Foreign key → Category |
+| `part_kind` | enum | See *Part kind* below |
+| `manufacturer` | text | Manufacturer name |
+| `manufacturer_part_number` | text | MPN |
+| `default_unit` | text | e.g. "pcs", "ml", "m" |
+| `package_type` | text | e.g. "DIP-8", "SOT-23", "through-hole" |
+| `spec_summary` | text | Key specifications as a short text block |
+| `capabilities_json` | jsonb | Structured capability data (extensible) |
+| `tags` | text[] | Searchable tags (e.g. "I2C", "WiFi", "3.3V") |
+| `aliases` | text[] | Common names and alternate search terms (denormalised from PartAlias) |
+| `search_text` | tsvector | Denormalised full-text search column |
+| `is_consumable` | boolean | Whether this part is consumed on use |
+| `is_serialised` | boolean | Whether individual units carry serial numbers |
+| `is_hazardous` | boolean | Whether special handling is required |
+| `is_active` | boolean | Whether this part is in active use |
+| `status` | enum | `active`, `draft`, `archived` |
+| `identification_confidence` | integer | 0–100; how certain the identification is |
+| `needs_review` | boolean | Flagged for human review (e.g. AI-created record) |
+| `provenance` | text | How this record was created (e.g. "manual", "ai_enriched", "imported") |
+| `notes` | text | Free-text notes |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Last update timestamp |
 
-## Location
-
-A **Location** is a physical room or area (e.g. Loft, Garage, Office).
-
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `name` | Display name (e.g. "Loft") |
-| `description` | Optional description |
-| `parent_id` | Optional self-reference for sub-locations |
-| `created_at` | Timestamp |
-
----
-
-## Container
-
-A **Container** is a physical storage object within a location: a box, tray, drawer, case, shelf, organiser, or similar.
-
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `name` | Display name (e.g. "Box B", "Blue Tray 4") |
-| `location_id` | Foreign key → Location |
-| `parent_container_id` | Optional self-reference for nested containers (e.g. a tray inside a case) |
-| `description` | Optional description |
-| `created_at` | Timestamp |
+**Part kind** (enum): `component`, `board`, `module`, `device`, `tool`, `consumable`, `material`, `accessory`, `cable`, `power_supply`, `enclosure`.
 
 ---
 
-## Document
+### StockItem
 
-A **Document** is a locally preserved file or reference. It may be a PDF datasheet, a manual, a photo, a schematic, a receipt, a pinout image, a saved vendor page, or a plain-text note.
+A **StockItem** is what you physically own. One Part can have many StockItems — for example, three ESP32 boards in different locations, or a bag of 40 LEDs counted as one row with `quantity = 40`.
 
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `title` | Human-readable title |
-| `document_type` | e.g. datasheet, manual, schematic, pinout, receipt, note, vendor_page, photo |
-| `file_path` | Path to the local file on disk (relative to document root) |
-| `mime_type` | MIME type of the stored file |
-| `original_url` | Source URL if captured from the web (nullable) |
-| `part_id` | Foreign key → Part (nullable) |
-| `project_id` | Foreign key → Project (nullable) |
-| `notes` | Free-text notes |
-| `created_at` | Timestamp |
+> **A StockItem is not the part definition. It is the physical instance (or grouped batch) in your possession.**
 
----
+`stock_type` controls whether this item is tracked individually or as bulk stock:
 
-## Project
+- `serialised` — one unit with its own serial number
+- `batch` — a specific batch/lot
+- `bulk` — loose stock counted by quantity
+- `consumable` — use-and-replace material
+- `kit` — a grouped set
 
-A **Project** is a build, experiment, or planned activity. It may be completed, in progress, planned, or just an idea.
-
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `name` | Project name |
-| `description` | Summary of what the project does |
-| `status` | e.g. idea, planned, in_progress, completed, abandoned |
-| `notes` | Free-text notes |
-| `created_at` | Timestamp |
-| `updated_at` | Timestamp |
-
----
-
-## ProjectPart (BOM item)
-
-A **ProjectPart** links a Part to a Project, forming a bill of materials (BOM). It records the intended or actual use of a part within the project.
-
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `project_id` | Foreign key → Project |
-| `part_id` | Foreign key → Part |
-| `quantity` | Number of units used or required |
-| `role` | Description of the part's role in the project (e.g. "main MCU", "power switch") |
-| `status` | e.g. planned, sourced, fitted, spare |
-| `notes` | Free-text notes |
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `part_id` | UUID | Foreign key → Part |
+| `stock_type` | enum | `serialised`, `batch`, `bulk`, `consumable`, `kit` |
+| `quantity` | numeric | Number of units |
+| `unit` | text | Unit of measure (overrides Part default if set) |
+| `condition` | enum | `new`, `used`, `tested`, `untested`, `faulty`, `damaged`, `unknown` |
+| `location_id` | UUID | Foreign key → Location (nullable if container is set) |
+| `container_id` | UUID | Foreign key → Container (nullable if location is set) |
+| `status` | enum | `available`, `reserved`, `consumed`, `missing`, `damaged`, `unknown` |
+| `owner_label` | text | Optional human label (e.g. "From kit", "Work spare") |
+| `serial_number` | text | Serial number (for `serialised` items) |
+| `batch_number` | text | Batch number |
+| `lot_number` | text | Lot number |
+| `purchase_date` | date | Date purchased |
+| `purchase_price` | numeric | Price paid |
+| `supplier` | text | Supplier name |
+| `supplier_order_ref` | text | Order or invoice reference |
+| `expiry_date` | date | For perishable or time-limited items |
+| `received_date` | date | Date received |
+| `opened_date` | date | Date first opened (for consumables) |
+| `photo_url` | text | URL/path to a photo of this specific item |
+| `reserved_for_project_id` | UUID | Foreign key → Project (nullable) |
+| `notes` | text | Free-text notes |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Last update timestamp |
 
 ---
 
-## UsageHistory
+### Location
 
-A **UsageHistory** record captures a point-in-time event where a StockItem was used, moved, or modified.
+A **Location** is a physical place. Locations are hierarchical (a room inside a building, a building on a site).
 
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `stock_item_id` | Foreign key → StockItem |
-| `project_id` | Foreign key → Project (nullable) |
-| `event_type` | e.g. used, returned, moved, discarded, repaired |
-| `quantity_delta` | Change in quantity (negative for consumption) |
-| `notes` | Free-text notes |
-| `event_at` | Timestamp of the event |
-| `created_at` | Record creation timestamp |
+> **A Location is the place, not the box or tray.** Boxes and trays are Containers.
 
----
-
-## AIProviderConfig
-
-Stores configuration for each configured AI provider. Secrets (API keys) are stored in environment variables; this table stores non-secret configuration.
-
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `name` | Human label (e.g. "Local Ollama", "OpenAI GPT-4o") |
-| `provider_type` | e.g. openai, anthropic, ollama, deepseek, openai_compatible |
-| `endpoint_url` | Base URL for the provider's API |
-| `model_name` | Model identifier (e.g. "gpt-4o", "llama3") |
-| `is_active` | Boolean; whether this is the currently active provider |
-| `supports_embeddings` | Boolean; whether this provider supports embedding generation |
-| `notes` | Free-text notes |
-| `created_at` | Timestamp |
-| `updated_at` | Timestamp |
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `name` | text | Display name (e.g. "Garage") |
+| `location_type` | enum | `site`, `building`, `room`, `storage_area` |
+| `parent_location_id` | UUID | Self-reference for nested locations (nullable) |
+| `path` | text | Materialised path for efficient subtree queries (e.g. "Home/Garage") |
+| `description` | text | Optional description |
+| `notes` | text | Free-text notes |
+| `is_active` | boolean | Whether this location is currently in use |
 
 ---
 
-## EnrichmentJob
+### Container
 
-Tracks background AI enrichment tasks such as auto-filling part descriptions or extracting metadata from documents.
+A **Container** is a storage object within a location — a box, tray, drawer, case, organiser, bag, shelf, or bin. Containers can nest inside other containers.
 
-| Field | Description |
-|---|---|
-| `id` | UUID primary key |
-| `job_type` | e.g. enrich_part, index_document, suggest_projects |
-| `entity_type` | The entity type being enriched (e.g. "Part", "Document") |
-| `entity_id` | ID of the entity |
-| `provider_config_id` | Foreign key → AIProviderConfig |
-| `status` | e.g. pending, running, completed, failed |
-| `result_summary` | Short text summary of the outcome |
-| `error_message` | Error detail if failed |
-| `created_at` | Timestamp |
-| `completed_at` | Timestamp (nullable) |
+> **A Container belongs to a Location, or to another Container.** This models "Garage → Case F → Tray 2" correctly.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `name` | text | Display name (e.g. "Box B", "Tray 4") |
+| `container_type` | enum | `box`, `tray`, `drawer`, `case`, `organiser`, `bag`, `shelf`, `bin` |
+| `location_id` | UUID | Foreign key → Location (top-level placement) |
+| `parent_container_id` | UUID | Self-reference for nested containers (nullable) |
+| `label_code` | text | Physical label code or barcode for scanning |
+| `description` | text | Optional description |
+| `notes` | text | Free-text notes |
+| `is_active` | boolean | Whether this container is in use |
 
 ---
 
-## Relationships summary
+### Document
 
-- A **Part** may have many **StockItems**, many **Documents**, and appear in many **ProjectParts**
-- A **StockItem** belongs to one **Part** and optionally to one **Container**
-- A **Container** belongs to one **Location** and may nest within another **Container**
-- A **Project** may have many **ProjectParts** and many **Documents**
-- A **Document** may be attached to a **Part** or a **Project** (or neither, as a free-standing reference)
-- An **EnrichmentJob** is linked to a specific entity and a specific **AIProviderConfig**
+A **Document** is any locally preserved reference material: a PDF datasheet, pinout image, manual, saved vendor page, receipt, wiring note, or setup guide.
+
+> **Documents are first-class entities, not simple file attachments.** They carry rich metadata, extracted text, and summaries that make them valuable for AI grounding and search.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `document_type` | enum | See *Document type* below |
+| `title` | text | Human-readable title |
+| `source_url` | text | Original upstream URL (nullable; may be dead) |
+| `source_type` | enum | `uploaded`, `captured_from_web`, `manual_note`, `generated_summary` |
+| `local_path` | text | Path on the document volume (relative to document root) |
+| `mime_type` | text | MIME type of the stored file |
+| `checksum` | text | SHA-256 of the stored file for integrity checking |
+| `file_size_bytes` | bigint | File size |
+| `captured_at` | timestamptz | When the document was captured or uploaded |
+| `version_label` | text | Optional version label (e.g. "Rev C", "2023-10") |
+| `text_extracted` | text | Raw text extracted from the document (for full-text search) |
+| `summary` | text | AI-generated or manually written summary |
+| `metadata_json` | jsonb | Extensible extracted metadata |
+| `notes` | text | Free-text notes |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Last update timestamp |
+
+**Document type** (enum): `datasheet`, `manual`, `pinout`, `schematic`, `vendor_page`, `receipt`, `photo`, `project_note`, `setup_note`, `firmware_note`.
+
+Documents do not have a hard foreign key to Part or Project. They are linked via join tables so that one Document can relate to multiple entities.
+
+---
+
+### PartDocument
+
+Links Documents to Parts.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `part_id` | UUID | Foreign key → Part |
+| `document_id` | UUID | Foreign key → Document |
+| `relationship_type` | enum | `primary_datasheet`, `manual`, `pinout`, `schematic`, `supporting_reference`, `other` |
+| `is_primary` | boolean | Whether this is the primary document of its type for this part |
+| `notes` | text | Optional notes on the relationship |
+
+---
+
+### StockItemDocument
+
+Links Documents to StockItems (e.g. receipts, condition photos, serial number snapshots).
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `stock_item_id` | UUID | Foreign key → StockItem |
+| `document_id` | UUID | Foreign key → Document |
+| `relationship_type` | text | e.g. `receipt`, `condition_photo`, `serial_photo`, `other` |
+
+---
+
+### Project
+
+A **Project** is a planned, active, or completed build or experiment.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `name` | text | Project name |
+| `slug` | text | URL-friendly identifier |
+| `description` | text | Summary of the project |
+| `status` | enum | `idea`, `planned`, `active`, `paused`, `completed`, `abandoned` |
+| `goal` | text | What the project is trying to achieve |
+| `difficulty` | enum | `beginner`, `intermediate`, `advanced` |
+| `estimated_hours` | numeric | Rough time estimate |
+| `priority` | integer | Sort priority |
+| `notes` | text | Free-text notes |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Last update timestamp |
+
+---
+
+### ProjectPart (BOM entry)
+
+A **ProjectPart** links a Part to a Project, forming a bill of materials (BOM).
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `project_id` | UUID | Foreign key → Project |
+| `part_id` | UUID | Foreign key → Part |
+| `quantity_required` | numeric | Number of units needed |
+| `unit` | text | Unit of measure |
+| `is_optional` | boolean | Whether this part is optional for the project |
+| `is_owned` | boolean | Whether the required quantity is currently in stock |
+| `role` | enum | `controller`, `sensor`, `actuator`, `power`, `mounting`, `enclosure`, `other` |
+| `notes` | text | Free-text notes |
+
+---
+
+### UsageHistory
+
+Tracks what was actually used, consumed, moved, or tested.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `project_id` | UUID | Foreign key → Project (nullable) |
+| `stock_item_id` | UUID | Foreign key → StockItem (nullable) |
+| `part_id` | UUID | Foreign key → Part (nullable; denormalised for queries) |
+| `action_type` | enum | `allocated`, `used`, `returned`, `consumed`, `tested`, `damaged` |
+| `quantity_delta` | numeric | Change in quantity (negative for consumption) |
+| `used_at` | timestamptz | When the event occurred |
+| `notes` | text | Free-text notes |
+
+---
+
+### PartAlias
+
+Stores alternate names, common nicknames, OCR-extracted labels, and AI-suggested aliases for a Part. Kept as a separate table (not embedded in JSON) to enable efficient fuzzy search.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `part_id` | UUID | Foreign key → Part |
+| `alias` | text | The alternate name or search term |
+| `alias_type` | enum | `common_name`, `manufacturer_name`, `nickname`, `ocr_extracted`, `ai_suggested` |
+| `source` | text | Where this alias came from (e.g. "user", "ai_enrichment") |
+| `is_preferred` | boolean | Whether this is the preferred display alias |
+
+---
+
+### Capability
+
+Stores normalised capability/specification data for a Part. Provides structured data for AI-grounded queries ("show me 3.3V boards", "find any I2C sensors").
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `part_id` | UUID | Foreign key → Part |
+| `capability_type` | enum | See *Capability type* below |
+| `value_text` | text | Text value (e.g. "I2C") |
+| `value_number` | numeric | Numeric value (e.g. 3.3) |
+| `unit` | text | Unit for numeric value (e.g. "V", "mA") |
+| `value_json` | jsonb | Extensible structured value |
+| `source_document_id` | UUID | Foreign key → Document (nullable; where this was extracted from) |
+| `confidence` | integer | 0–100; how confident the data is |
+
+**Capability type** (enum): `voltage_min`, `voltage_max`, `logic_level`, `interface`, `wireless_protocol`, `current_draw`, `gpio_count`, `temperature_range`, `form_factor`.
+
+---
+
+### AIProviderConfig
+
+Stores configuration for each configured AI provider. Secrets (API keys) are stored in environment variables; this table stores non-secret configuration only.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `name` | text | Human label (e.g. "Local Ollama", "OpenAI GPT-4o") |
+| `provider_type` | enum | `openai`, `anthropic`, `ollama`, `openai_compatible`, `local_custom` |
+| `base_url` | text | Base URL for the provider's API |
+| `model_name` | text | Model identifier (e.g. "gpt-4o", "llama3") |
+| `task_scope` | enum | `chat`, `enrichment`, `embeddings`, `classification`, `project_ideas` |
+| `is_enabled` | boolean | Whether this provider is enabled |
+| `priority` | integer | Selection priority when multiple providers support the same scope |
+| `config_json` | jsonb | Additional non-secret configuration |
+| `created_at` | timestamptz | Creation timestamp |
+| `updated_at` | timestamptz | Last update timestamp |
+
+---
+
+### EnrichmentJob
+
+Tracks background AI and parsing jobs. Records input, output, and status for traceability and retry.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `job_type` | enum | `extract_metadata`, `summarise_document`, `classify_part`, `generate_aliases`, `suggest_projects`, `embed_document` |
+| `target_type` | text | Entity type being processed (e.g. "Part", "Document") |
+| `target_id` | UUID | ID of the target entity |
+| `provider_config_id` | UUID | Foreign key → AIProviderConfig (nullable) |
+| `status` | enum | `queued`, `running`, `completed`, `failed`, `cancelled` |
+| `input_hash` | text | Hash of the input used (for deduplication and re-run detection) |
+| `result_json` | jsonb | Full structured result from the job |
+| `error_message` | text | Error detail if failed |
+| `started_at` | timestamptz | When the job started |
+| `completed_at` | timestamptz | When the job finished (nullable) |
+| `created_at` | timestamptz | Record creation timestamp |
+
+---
+
+## Relationships overview
+
+```
+Category     1──N  Part
+Part         1──N  StockItem
+Part         N──N  Document            (via PartDocument)
+Part         N──N  Project             (via ProjectPart)
+Part         1──N  PartAlias
+Part         1──N  Capability
+Location     1──N  Container
+Location     1──N  StockItem           (direct placement, no container)
+Container    1──N  Container           (nested containers)
+Container    1──N  StockItem
+StockItem    N──N  Document            (via StockItemDocument)
+StockItem    1──N  UsageHistory
+Project      1──N  UsageHistory
+AIProviderConfig  1──N  EnrichmentJob
+```
+
+---
+
+## Key distinctions
+
+### Part vs StockItem
+
+This is the most important separation in the model.
+
+| Concept | Entity | Example |
+|---|---|---|
+| The abstract type | Part | ESP32 DevKit V1 |
+| A physical instance you own | StockItem | 3 units, Box B, Garage |
+
+**Do not merge these.** A single Part definition may have many StockItems — units in different locations, in different conditions, with different purchase histories. Merging them collapses search, BOM generation, and duplicate detection.
+
+### Location vs Container
+
+| Concept | Entity | Example |
+|---|---|---|
+| The physical place | Location | Garage |
+| The storage object in that place | Container | Case F, Tray 2 |
+
+Containers belong to a Location (or to another Container). This models `Garage → Case F → Tray 2` correctly. Storing location as a text field loses the ability to move a whole case, search by room, or generate labels for nested containers.
+
+### Document as a first-class entity
+
+Documents are not simple file attachments. They carry extracted text, AI summaries, checksums, and source metadata. A Document can be linked to a Part, a StockItem, a Project, or none — via join tables. This makes stored documents a searchable, AI-grounded knowledge base rather than a dead file drop.
+
+### AI suggestions must be traceable
+
+Every AI-generated suggestion, enrichment result, or capability inference must point back to a grounded record (`part_id`, `stock_item_id`, `document_id`, or `project_id`). The database is the source of truth; AI is reasoning on top of it.
+
+---
+
+## v1 scope vs later extensions
+
+### Minimum viable schema (Phase 1–2)
+
+Implement these entities first:
+
+- Part
+- StockItem
+- Location
+- Container
+- Category
+- Document
+- PartDocument
+- StockItemDocument
+- Project
+- ProjectPart
+
+### Phase 3–4 additions
+
+Add when implementing AI workflows:
+
+- AIProviderConfig
+- EnrichmentJob
+
+### Phase 4–5 additions
+
+Add when workflows and search mature:
+
+- UsageHistory
+- PartAlias
+- Capability
+
+---
+
+## Indicative status enumerations
+
+| Entity | Status values |
+|---|---|
+| Part | `active`, `draft`, `archived` |
+| StockItem | `available`, `reserved`, `consumed`, `missing`, `damaged`, `unknown` |
+| Project | `idea`, `planned`, `active`, `paused`, `completed`, `abandoned` |
+| Document source type | `uploaded`, `captured_from_web`, `manual_note`, `generated_summary` |
+| EnrichmentJob | `queued`, `running`, `completed`, `failed`, `cancelled` |

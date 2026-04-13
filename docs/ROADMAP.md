@@ -20,24 +20,25 @@ This roadmap is broken into phases. Each phase should be functional and stable b
 
 ## Phase 1 — Core inventory and locations
 
-- [ ] Database schema: Part, StockItem, Location, Container
+- [ ] Database schema: Category, Part, StockItem, Location, Container
 - [ ] Alembic migrations for Phase 1 entities
-- [ ] API endpoints: CRUD for Parts, StockItems, Locations, Containers
+- [ ] API endpoints: CRUD for Parts, StockItems, Locations, Containers, Categories
 - [ ] Frontend: list and detail views for Parts and StockItems
 - [ ] Frontend: location and container hierarchy view
 - [ ] Frontend: form to add/edit a Part and its StockItems
-- [ ] Basic full-text search over part names, descriptions, and tags
+- [ ] Basic full-text search over part names, descriptions, and tags (using `search_text` tsvector column)
 - [ ] Manual API testing via OpenAPI docs at `/docs`
 
 ---
 
 ## Phase 2 — Documents and local capture
 
-- [ ] Database schema: Document
+- [ ] Database schema: Document, PartDocument, StockItemDocument
 - [ ] API: document upload endpoint (PDF, image, HTML)
 - [ ] Document storage on local volume with UUID-based paths
 - [ ] API: document retrieval with access control check
-- [ ] Frontend: attach documents to parts or projects
+- [ ] API: link/unlink documents to parts and stock items via join tables
+- [ ] Frontend: attach documents to parts or stock items
 - [ ] Frontend: inline PDF and image viewer
 - [ ] Frontend: note/text document creation
 - [ ] Optional: capture a vendor web page as a locally preserved HTML snapshot
@@ -59,12 +60,13 @@ This roadmap is broken into phases. Each phase should be functional and stable b
 
 ## Phase 4 — AI-assisted workflows
 
-- [ ] Database schema: EnrichmentJob
+- [ ] Database schema: EnrichmentJob, PartAlias, Capability
 - [ ] Worker: background enrichment job runner
 - [ ] AI-assisted part enrichment: fill missing fields from stored documents
+- [ ] AI-generated aliases stored in PartAlias; normalised capabilities stored in Capability
 - [ ] AI-assisted search: natural language query over inventory with database grounding
 - [ ] AI project suggestion: "what could I build with what I own?"
-- [ ] AI capability query: "what parts do I have that can do X?"
+- [ ] AI capability query: "what parts do I have that can do X?" (grounded in Capability table)
 - [ ] Frontend: AI query panel with grounded results (show which parts/documents were used)
 - [ ] Frontend: enrichment job status and review
 
@@ -77,8 +79,8 @@ This roadmap is broken into phases. Each phase should be functional and stable b
 - [ ] Responsive design review and mobile usability improvements
 - [ ] Semantic / vector search (pgvector or similar)
 - [ ] Bulk operations (move stock, update quantities)
-- [ ] Project status tracking and BOM completion view
-- [ ] Usage history view per part or project
+- [ ] Project status tracking and BOM completion view (using ProjectPart `is_owned`)
+- [ ] Usage history view per part or project (UsageHistory)
 - [ ] Data export (JSON, CSV)
 - [ ] Performance and reliability hardening
 - [ ] Documentation review and user-facing help content

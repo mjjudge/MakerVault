@@ -92,6 +92,62 @@ The database is the sole source of truth for what the user owns, where it is, an
 
 ---
 
+---
+
+## ADR-006 — Separate Part from StockItem
+
+**Status:** Accepted
+
+**Context:**
+A common shortcut is to store "what a thing is" and "what you own" in a single table (e.g. `item` with `quantity` and `location`). This collapses the abstract definition of a component with the physical inventory record.
+
+**Decision:**
+Part and StockItem are modelled as separate entities. Part describes the abstract type ("ESP32 DevKit V1"). StockItem records a physical owned instance or batch ("3 units, Box B, Garage"). A Part may have many StockItems. See `DATA_MODEL.md` for detail.
+
+**Consequences:**
+- Parts can be referenced in BOMs without owning any physical stock
+- Multiple physical batches of the same part (different locations, conditions, purchase dates) are naturally supported
+- Search, duplicate detection, and AI grounding are cleaner
+- Slightly more complex data entry, but this is mitigated by UI design
+
+---
+
+## ADR-007 — Separate Location from Container
+
+**Status:** Accepted
+
+**Context:**
+A simple approach is to store location as a single text field (e.g. "Garage / Case F / Tray 2"). This loses structure and makes hierarchy, label printing, and bulk moves impossible.
+
+**Decision:**
+Location and Container are separate entities. A Location is a physical place (room, building, site). A Container is a storage object within a location (box, tray, drawer). Containers belong to a Location or to another Container, enabling full hierarchy: `Garage → Case F → Tray 2`. See `DATA_MODEL.md` for detail.
+
+**Consequences:**
+- Moving an entire case updates only the case's `location_id`; all nested containers and their stock items follow
+- "Where is this part?" queries traverse the container/location hierarchy
+- Label codes and QR codes can be attached to containers and resolved back to a location path
+- Slightly more joins in queries, but the structure pays off in every location-related workflow
+
+---
+
+## ADR-008 — Documents as first-class entities linked via join tables
+
+**Status:** Accepted
+
+**Context:**
+The original design gave Document a single nullable `part_id` and `project_id` column. This prevents a document from being linked to multiple entities and creates NULL-heavy foreign keys.
+
+**Decision:**
+Documents do not carry hard foreign keys to Part or Project. Instead, `PartDocument` and `StockItemDocument` join tables link documents to their associated entities. This allows one document (e.g. a generic datasheet) to be linked to multiple parts, and allows receipts or photos to be linked to specific stock items rather than part definitions.
+
+**Consequences:**
+- A document can be reused across multiple parts without duplication
+- Receipts, condition photos, and serial snapshots attach to StockItems rather than Part definitions
+- Queries to find all documents for a part require a join, but this is straightforward
+- Future: additional join tables can link documents to projects, suppliers, or topics without schema changes to the Document table
+
+---
+
 ## Candidate decisions (not yet resolved)
 
 The following decisions have not been finalised. They should be resolved before the relevant phase of implementation begins.
