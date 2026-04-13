@@ -12,6 +12,7 @@ from makervault.models.container import Container
 from makervault.models.document import Document
 from makervault.models.location import Location
 from makervault.models.part import Part
+from makervault.models.part_alias import PartAlias
 from makervault.models.part_document import PartDocument
 from makervault.models.project import Project
 from makervault.models.project_document import ProjectDocument
@@ -24,6 +25,7 @@ __all__ = [
     "Document",
     "Location",
     "Part",
+    "PartAlias",
     "PartDocument",
     "Project",
     "ProjectDocument",

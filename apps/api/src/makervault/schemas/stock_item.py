@@ -89,6 +89,8 @@ class StockItemResponse(BaseSchema):
     last_seen_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    location_name: str | None = None
+    container_name: str | None = None
 
 
 class StockItemListResponse(BaseSchema):

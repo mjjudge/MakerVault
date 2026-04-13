@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from makervault.models.part import PART_KIND_VALUES, PART_STATUS_VALUES
 from makervault.schemas.base import BaseSchema
@@ -24,6 +24,7 @@ class PartCreate(BaseSchema):
     spec_summary: str | None = None
     capabilities_json: dict[str, Any] | None = None
     tags: list[str] | None = None
+    aliases: list[str] | None = None
     is_consumable: bool = False
     is_serialised: bool = False
     is_hazardous: bool = False
@@ -46,6 +47,7 @@ class PartUpdate(BaseSchema):
     spec_summary: str | None = None
     capabilities_json: dict[str, Any] | None = None
     tags: list[str] | None = None
+    aliases: list[str] | None = None
     is_consumable: bool | None = None
     is_serialised: bool | None = None
     is_hazardous: bool | None = None
@@ -70,6 +72,7 @@ class PartResponse(BaseSchema):
     spec_summary: str | None
     capabilities_json: dict[str, Any] | None
     tags: list[str] | None
+    aliases: list[str] | None
     is_consumable: bool
     is_serialised: bool
     is_hazardous: bool
@@ -81,6 +84,19 @@ class PartResponse(BaseSchema):
     notes: str | None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("aliases", mode="before")
+    @classmethod
+    def _coerce_aliases(cls, v: Any) -> Any:
+        """Accept a plain string (SQLite comma-sep storage) or native list."""
+        if v is None or isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            stripped = v.strip()
+            if not stripped:
+                return None
+            return [a.strip() for a in stripped.split(",") if a.strip()]
+        return v
 
 
 class PartListResponse(BaseSchema):

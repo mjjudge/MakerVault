@@ -114,6 +114,9 @@ class Part(TimestampMixin, Base):
     project_parts: Mapped[list["ProjectPart"]] = relationship(  # noqa: F821
         "ProjectPart", back_populates="part"
     )
+    alias_entries: Mapped[list["PartAlias"]] = relationship(  # noqa: F821
+        "PartAlias", back_populates="part", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Part id={self.id} part_code={self.part_code!r} name={self.name!r}>"

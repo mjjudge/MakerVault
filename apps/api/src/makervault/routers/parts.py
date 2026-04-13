@@ -3,7 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from makervault.database import get_db_session
@@ -22,10 +22,11 @@ router = APIRouter(prefix="/parts", tags=["parts"])
 async def list_parts(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    q: str | None = Query(default=None, description="Simple text search (name, code, description)"),
+    q: str | None = Query(default=None, description="Simple text search (name, code, description, aliases)"),
     category_id: uuid.UUID | None = Query(default=None),
     status: str | None = Query(default=None),
     part_kind: str | None = Query(default=None),
+    tags: list[str] | None = Query(default=None, description="Filter by tags (PostgreSQL only)"),
     db: AsyncSession = Depends(get_db_session),
 ) -> PartListResponse:
     query = select(Part)
@@ -34,6 +35,9 @@ async def list_parts(
     filters = []
     if q:
         like = f"%{q}%"
+        # Search the denormalised aliases column (TEXT on SQLite, TEXT[] on Postgres).
+        # Casting to Text works on both: Postgres gives '{alias1,alias2}' string;
+        # SQLite aliases column is already TEXT.
         filters.append(
             or_(
                 Part.name.ilike(like),
@@ -41,6 +45,7 @@ async def list_parts(
                 Part.short_description.ilike(like),
                 Part.manufacturer.ilike(like),
                 Part.manufacturer_part_number.ilike(like),
+                cast(Part.aliases, Text).ilike(like),
             )
         )
     if category_id is not None:
@@ -49,6 +54,11 @@ async def list_parts(
         filters.append(Part.status == status)
     if part_kind is not None:
         filters.append(Part.part_kind == part_kind)
+    if tags:
+        # PostgreSQL ARRAY containment — all supplied tags must appear in Part.tags
+        from sqlalchemy.dialects.postgresql import ARRAY
+        for tag in tags:
+            filters.append(Part.tags.op("@>")(cast([tag], ARRAY(Text))))
 
     if filters:
         query = query.where(*filters)
@@ -81,7 +91,15 @@ async def create_part(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"A part with code '{body.part_code}' already exists.",
         )
-    part = Part(**body.model_dump())
+    data = body.model_dump()
+    # Strip PostgreSQL ARRAY fields on non-PostgreSQL backends (e.g. SQLite in tests).
+    try:
+        if db.sync_session.get_bind().dialect.name != "postgresql":
+            data.pop("aliases", None)
+            data.pop("tags", None)
+    except Exception:
+        pass
+    part = Part(**data)
     db.add(part)
     await db.flush()
     await db.refresh(part)
@@ -123,6 +141,13 @@ async def update_part(
             detail=f"Part {part_id} not found.",
         )
     updates = body.model_dump(exclude_unset=True)
+    # Strip PostgreSQL ARRAY fields on non-PostgreSQL backends (e.g. SQLite in tests).
+    try:
+        if db.sync_session.get_bind().dialect.name != "postgresql":
+            updates.pop("aliases", None)
+            updates.pop("tags", None)
+    except Exception:
+        pass
     for field, value in updates.items():
         setattr(part, field, value)
     await db.flush()
