@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** Initial working backlog. Ordered for pragmatic delivery, not completeness.  
+> **Status:** EPICs 0–5 complete. EPIC 6 next.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -60,7 +60,7 @@ Testing is a first-class concern in MakerVault.
 
 ---
 
-# EPIC 0 — Working conventions and delivery foundation
+# EPIC 0 — Working conventions and delivery foundation ✅ COMPLETE
 
 ## Goal
 Make the repository execution-ready so future work is consistent, reviewable, and testable.
@@ -95,7 +95,7 @@ Make the repository execution-ready so future work is consistent, reviewable, an
 
 ---
 
-# EPIC 1 — Docker runtime scaffold
+# EPIC 1 — Docker runtime scaffold ✅ COMPLETE
 
 ## Goal
 Establish Docker Compose as the primary way to run MakerVault locally and on the Ubuntu host.
@@ -132,10 +132,22 @@ Establish Docker Compose as the primary way to run MakerVault locally and on the
 
 ---
 
-# EPIC 2 — Backend foundation and test harness
+# EPIC 2 — Backend foundation and test harness ✅ COMPLETE
 
 ## Goal
 Create the backend project skeleton with testing and migration foundations before business features.
+
+## Completed
+- FastAPI application in `apps/api/src/makervault/`
+- `pyproject.toml` with runtime and dev dependencies
+- Pydantic-settings config pattern (`config.py`)
+- Async SQLAlchemy engine and session factory (`database.py`)
+- Alembic migration tooling (`alembic.ini`, `migrations/env.py`)
+- Health endpoint (`GET /api/health`) with DB connectivity check
+- Pytest + pytest-asyncio test harness (15 tests, all passing)
+- `Dockerfile` for the api service (multi-stage, non-root)
+- Nginx reverse proxy config (`infra/nginx/default.conf`)
+- `docker-compose.yml` updated to build api from source
 
 ## Scope
 - API placeholder app
@@ -168,10 +180,21 @@ Create the backend project skeleton with testing and migration foundations befor
 
 ---
 
-# EPIC 3 — Core domain schema: inventory foundations
+# EPIC 3 — Core domain schema: inventory foundations ✅ COMPLETE
 
 ## Goal
 Implement the first real domain slice for inventory and placement.
+
+## Completed
+- Category ORM model with hierarchical self-reference
+- Location ORM model with hierarchical self-reference
+- Container ORM model with placement rule (location OR parent container, not both)
+- Part ORM model with full field set from DATA_MODEL (enums, JSONB, TSVECTOR, arrays)
+- StockItem ORM model with placement rule (location OR container, not both)
+- Python-side `@validates` guards for dual/null placement violations
+- Cross-database compatible `CASE WHEN` check constraints
+- Alembic initial migration (`migrations/versions/0001_initial_schema.py`)
+- 17 new model tests (32 total, all passing)
 
 ## Scope
 Initial schema and persistence for:
@@ -209,10 +232,22 @@ Initial schema and persistence for:
 
 ---
 
-# EPIC 4 — Basic API: parts, stock, locations, containers
+# EPIC 4 — Basic API: parts, stock, locations, containers ✅ COMPLETE
 
 ## Goal
 Expose the inventory foundation through a practical REST API.
+
+## Completed
+- Pydantic schemas for all 5 resources (Category, Location, Container, Part, StockItem)
+- CRUD endpoints (create, read, update, delete, list) for all resources
+- Filtering by category, status, part_kind, location, container, part_id
+- Pagination (skip/limit) on all list endpoints
+- Simple text search over parts (name, code, description, manufacturer, MPN)
+- Placement-aware stock retrieval
+- Input validation (placement rules, enum values, required fields)
+- Part code uniqueness enforced at API level (409 Conflict)
+- 31 new API endpoint tests (63 total, all passing)
+- OpenAPI docs available at `/api/docs`
 
 ## Scope
 CRUD and list/search APIs for:
@@ -248,21 +283,27 @@ CRUD and list/search APIs for:
 
 ---
 
-# EPIC 5 — Basic web UI: search-first inventory workflow
+# EPIC 5 — Basic web UI: search-first inventory workflow ✅ COMPLETE
 
 ## Goal
 Deliver the first usable interface.
 
-## Scope
-- Search-first homepage
-- Part detail page
-- Stock item detail/edit page
-- Location/container browser
-- Simple creation/edit workflows
-
-## Tasks
-- Create frontend scaffold under `apps/web`
-- Implement search-first landing view
+## Completed
+- React + Vite + TypeScript SPA scaffolded in `apps/web/`
+- `react-router-dom` navigation with 5 routes
+- `@tanstack/react-query` for server state management
+- `axios` API client with typed interfaces for all 5 resources
+- **Home page** — stats (parts/stock/locations count), search-first landing, quick links
+- **Parts page** — searchable list view, "+ New Part" modal form
+- **Part detail page** — edit-in-place form, delete, stock items table
+- **Stock page** — table view of all stock items
+- **Locations page** — locations + containers list, create modals
+- CSS design system (nav, cards, tables, badges, modals, forms)
+- `Dockerfile` for web service (multi-stage: Node build → Nginx runtime)
+- Vite dev proxy: `/api` → `http://api:8000`
+- `docker-compose.yml` updated: web now builds from `apps/web/Dockerfile`
+- 10 component/unit tests (73 total across Python + JS, all passing)
+- TypeScript build passes cleanly
 - Implement basic navigation
 - Implement part list/detail views
 - Implement stock placement views
