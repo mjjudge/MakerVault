@@ -5,7 +5,6 @@
 #   cp infra/docker/.env.example infra/docker/.env
 #   docker compose -f infra/docker/docker-compose.yml up
 #
-# Status: Scaffold — application images are placeholders pending implementation.
 
 name: makervault
 
@@ -20,27 +19,30 @@ services:
     ports:
       - "${NGINX_HTTP_PORT:-80}:80"
     volumes:
-      - ../../infra/nginx:/etc/nginx/conf.d:ro
+      - ../../infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - api
       - web
     networks:
       - makervault_net
     restart: unless-stopped
-    # PLACEHOLDER: nginx config in infra/nginx/ is not yet written.
 
   # ---------------------------------------------------------------------------
   # web — React + Vite frontend
-  # PLACEHOLDER: no application code exists yet.
   # ---------------------------------------------------------------------------
   web:
-    image: nginx:alpine          # placeholder — replace with apps/web build
-    # build:
-    #   context: ../../apps/web
-    #   dockerfile: Dockerfile
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile
     networks:
       - makervault_net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
 
   # ---------------------------------------------------------------------------
   # api — FastAPI backend

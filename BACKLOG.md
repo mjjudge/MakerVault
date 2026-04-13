@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0–4 complete. EPIC 5 in progress.
+> **Status:** EPICs 0–5 complete. EPIC 6 next.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -283,21 +283,27 @@ CRUD and list/search APIs for:
 
 ---
 
-# EPIC 5 — Basic web UI: search-first inventory workflow
+# EPIC 5 — Basic web UI: search-first inventory workflow ✅ COMPLETE
 
 ## Goal
 Deliver the first usable interface.
 
-## Scope
-- Search-first homepage
-- Part detail page
-- Stock item detail/edit page
-- Location/container browser
-- Simple creation/edit workflows
-
-## Tasks
-- Create frontend scaffold under `apps/web`
-- Implement search-first landing view
+## Completed
+- React + Vite + TypeScript SPA scaffolded in `apps/web/`
+- `react-router-dom` navigation with 5 routes
+- `@tanstack/react-query` for server state management
+- `axios` API client with typed interfaces for all 5 resources
+- **Home page** — stats (parts/stock/locations count), search-first landing, quick links
+- **Parts page** — searchable list view, "+ New Part" modal form
+- **Part detail page** — edit-in-place form, delete, stock items table
+- **Stock page** — table view of all stock items
+- **Locations page** — locations + containers list, create modals
+- CSS design system (nav, cards, tables, badges, modals, forms)
+- `Dockerfile` for web service (multi-stage: Node build → Nginx runtime)
+- Vite dev proxy: `/api` → `http://api:8000`
+- `docker-compose.yml` updated: web now builds from `apps/web/Dockerfile`
+- 10 component/unit tests (73 total across Python + JS, all passing)
+- TypeScript build passes cleanly
 - Implement basic navigation
 - Implement part list/detail views
 - Implement stock placement views
