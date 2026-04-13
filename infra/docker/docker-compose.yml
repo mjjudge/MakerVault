@@ -44,14 +44,11 @@ services:
 
   # ---------------------------------------------------------------------------
   # api — FastAPI backend
-  # PLACEHOLDER: no application code exists yet.
   # ---------------------------------------------------------------------------
   api:
-    image: python:3.12-slim      # placeholder — replace with apps/api build
-    # build:
-    #   context: ../../apps/api
-    #   dockerfile: Dockerfile
-    command: ["echo", "API placeholder — not yet implemented"]
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-makervault}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-makervault}
       DOCUMENT_STORE_PATH: /data/makervault/documents
@@ -64,6 +61,12 @@ services:
     networks:
       - makervault_net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
 
   # ---------------------------------------------------------------------------
   # worker — background job processor

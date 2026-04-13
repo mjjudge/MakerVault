@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** Initial working backlog. Ordered for pragmatic delivery, not completeness.  
+> **Status:** EPICs 0, 1, and 2 complete. EPIC 3 in progress.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -60,7 +60,7 @@ Testing is a first-class concern in MakerVault.
 
 ---
 
-# EPIC 0 — Working conventions and delivery foundation
+# EPIC 0 — Working conventions and delivery foundation ✅ COMPLETE
 
 ## Goal
 Make the repository execution-ready so future work is consistent, reviewable, and testable.
@@ -95,7 +95,7 @@ Make the repository execution-ready so future work is consistent, reviewable, an
 
 ---
 
-# EPIC 1 — Docker runtime scaffold
+# EPIC 1 — Docker runtime scaffold ✅ COMPLETE
 
 ## Goal
 Establish Docker Compose as the primary way to run MakerVault locally and on the Ubuntu host.
@@ -132,10 +132,22 @@ Establish Docker Compose as the primary way to run MakerVault locally and on the
 
 ---
 
-# EPIC 2 — Backend foundation and test harness
+# EPIC 2 — Backend foundation and test harness ✅ COMPLETE
 
 ## Goal
 Create the backend project skeleton with testing and migration foundations before business features.
+
+## Completed
+- FastAPI application in `apps/api/src/makervault/`
+- `pyproject.toml` with runtime and dev dependencies
+- Pydantic-settings config pattern (`config.py`)
+- Async SQLAlchemy engine and session factory (`database.py`)
+- Alembic migration tooling (`alembic.ini`, `migrations/env.py`)
+- Health endpoint (`GET /api/health`) with DB connectivity check
+- Pytest + pytest-asyncio test harness (15 tests, all passing)
+- `Dockerfile` for the api service (multi-stage, non-root)
+- Nginx reverse proxy config (`infra/nginx/default.conf`)
+- `docker-compose.yml` updated to build api from source
 
 ## Scope
 - API placeholder app
