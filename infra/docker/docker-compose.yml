@@ -1,0 +1,148 @@
+# MakerVault — Docker Compose
+# Primary deployment file for local development and self-hosted production.
+#
+# Usage:
+#   cp infra/docker/.env.example infra/docker/.env
+#   docker compose -f infra/docker/docker-compose.yml up
+#
+# Status: Scaffold — application images are placeholders pending implementation.
+
+name: makervault
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # nginx — reverse proxy
+  # Terminates HTTP connections and routes traffic to api and web.
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    volumes:
+      - ../../infra/nginx:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      - makervault_net
+    restart: unless-stopped
+    # PLACEHOLDER: nginx config in infra/nginx/ is not yet written.
+
+  # ---------------------------------------------------------------------------
+  # web — React + Vite frontend
+  # PLACEHOLDER: no application code exists yet.
+  # ---------------------------------------------------------------------------
+  web:
+    image: nginx:alpine          # placeholder — replace with apps/web build
+    # build:
+    #   context: ../../apps/web
+    #   dockerfile: Dockerfile
+    networks:
+      - makervault_net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # api — FastAPI backend
+  # PLACEHOLDER: no application code exists yet.
+  # ---------------------------------------------------------------------------
+  api:
+    image: python:3.12-slim      # placeholder — replace with apps/api build
+    # build:
+    #   context: ../../apps/api
+    #   dockerfile: Dockerfile
+    command: ["echo", "API placeholder — not yet implemented"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-makervault}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-makervault}
+      DOCUMENT_STORE_PATH: /data/makervault/documents
+      SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - documents:/data/makervault/documents
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - makervault_net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # worker — background job processor
+  # PLACEHOLDER: no application code exists yet.
+  # ---------------------------------------------------------------------------
+  worker:
+    image: python:3.12-slim      # placeholder — replace with apps/worker build
+    # build:
+    #   context: ../../apps/worker
+    #   dockerfile: Dockerfile
+    command: ["echo", "Worker placeholder — not yet implemented"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-makervault}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-makervault}
+      DOCUMENT_STORE_PATH: /data/makervault/documents
+    volumes:
+      - documents:/data/makervault/documents
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - makervault_net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # db — PostgreSQL primary database
+  # Data is persisted to a named volume; it survives container restarts.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-makervault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-makervault}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - makervault_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-makervault} -d ${POSTGRES_DB:-makervault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Future services (not yet implemented — add here when needed):
+  #
+  # vector-store:
+  #   Semantic search support via pgvector or a dedicated store (e.g. Qdrant).
+  #   Deferred to Phase 5.
+  #
+  # ai-provider:
+  #   Local AI inference via Ollama or similar.
+  #   Example:
+  #     image: ollama/ollama
+  #     volumes:
+  #       - ollama_data:/root/.ollama
+  #     networks:
+  #       - makervault_net
+  # ---------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Volumes
+# db_data      — PostgreSQL data directory; persistent across restarts
+# documents    — Local document store (PDFs, images, HTML snapshots)
+#                Mounted into api and worker at /data/makervault/documents
+#                This is a first-class concern: never delete this volume.
+# -----------------------------------------------------------------------------
+volumes:
+  db_data:
+    driver: local
+  documents:
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Networks
+# All services communicate over this private bridge network.
+# Only nginx is exposed to the host.
+# -----------------------------------------------------------------------------
+networks:
+  makervault_net:
+    driver: bridge

@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status:** Intended direction. No implementation exists yet.
+> **Status:** Docker Compose scaffold is in place. Application services (`api`, `web`, `worker`) are containerised placeholders pending implementation.
 
 ---
 
@@ -116,15 +116,19 @@ MakerVault is composed of three application processes, a database, a document st
 ```
 Host: Ubuntu server (single machine)
 
-docker-compose.yml
-├── web       (React app via Nginx)  port 80/443
-├── api       (FastAPI)              internal only
-├── worker    (Python background)    no external port
-├── db        (PostgreSQL)           internal only
-└── (redis)   (optional, for worker) internal only
+infra/docker/docker-compose.yml
+├── nginx     (reverse proxy)          port 80 → host
+├── web       (React app via Nginx)    internal only
+├── api       (FastAPI)                internal only
+├── worker    (Python background)      no external port
+└── db        (PostgreSQL 16)          internal only
+
+Named volumes:
+├── db_data      → /var/lib/postgresql/data   (database, persistent)
+└── documents    → /data/makervault/documents (document store, persistent)
 ```
 
-All services communicate over a private Docker network. Only Nginx is exposed to the host network.
+All services communicate over the private `makervault_net` bridge network. Only `nginx` is exposed to the host. The document volume (`documents`) is mounted into both `api` and `worker` — it must not be deleted.
 
 ---
 
