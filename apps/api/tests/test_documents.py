@@ -198,6 +198,18 @@ async def doc_engine():
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        await conn.execute(text("""
+            CREATE TABLE project_parts (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL REFERENCES projects(id),
+                part_id TEXT NOT NULL REFERENCES parts(id),
+                quantity_required REAL NOT NULL DEFAULT 1,
+                unit TEXT,
+                notes TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     yield engine
     await engine.dispose()
 
