@@ -491,8 +491,64 @@ export interface UsageHistoryEvent {
 }
 
 // ---------------------------------------------------------------------------
-// Part intake (Epic 14)
+// Hygiene dashboard and part merge (Epic 15)
 // ---------------------------------------------------------------------------
+
+export interface HygienePartSummary {
+  id: string
+  part_code: string
+  name: string
+  status: string
+}
+
+export interface SplitStockPart {
+  id: string
+  part_code: string
+  name: string
+  status: string
+  location_count: number
+  locations: string[]
+}
+
+export interface DuplicateGroup {
+  reason: string
+  parts: Array<{
+    id: string
+    part_code: string
+    name: string
+    manufacturer: string | null
+    manufacturer_part_number: string | null
+    status: string
+  }>
+}
+
+export interface HygieneDashboard {
+  parts_missing_documents: HygienePartSummary[]
+  parts_missing_aliases: HygienePartSummary[]
+  parts_missing_capabilities: HygienePartSummary[]
+  split_stock_parts: SplitStockPart[]
+  duplicate_groups: DuplicateGroup[]
+}
+
+export interface MergeResponse {
+  target_part_id: string
+  source_part_id: string
+  stock_items_moved: number
+  document_links_moved: number
+  aliases_moved: number
+  project_parts_moved: number
+  source_archived: boolean
+}
+
+export const hygieneApi = {
+  getDashboard: () =>
+    apiClient.get<HygieneDashboard>('/hygiene/dashboard').then(r => r.data),
+  mergePart: (sourcePartId: string, targetPartId: string) =>
+    apiClient
+      .post<MergeResponse>(`/parts/${sourcePartId}/merge`, { target_part_id: targetPartId })
+      .then(r => r.data),
+}
+
 
 export interface IntakeCandidate {
   part_id: string

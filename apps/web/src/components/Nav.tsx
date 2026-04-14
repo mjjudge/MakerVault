@@ -39,6 +39,9 @@ export function Nav() {
       <NavLink to="/intake" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
         Intake
       </NavLink>
+      <NavLink to="/hygiene" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+        Hygiene
+      </NavLink>
     </nav>
   )
 }
