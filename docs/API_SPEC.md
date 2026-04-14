@@ -139,6 +139,47 @@ Query parameters: `q` (query string), `type` (optional filter: `parts`, `stock`,
 | GET | `/api/v1/admin/jobs` | List background enrichment jobs |
 | GET | `/api/v1/admin/jobs/{id}` | Get a specific job's status |
 
+### Import / Export  *(Epic 13)*
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/import-export/parts/export` | Download all parts as a UTF-8 CSV file |
+| GET | `/api/import-export/parts/template` | Download a blank parts import CSV template |
+| POST | `/api/import-export/parts/import` | Upload a CSV file to bulk-create parts (existing `part_code` rows are skipped) |
+| GET | `/api/import-export/stock/export` | Download all stock items as a UTF-8 CSV file |
+| GET | `/api/import-export/stock/template` | Download a blank stock import CSV template |
+| POST | `/api/import-export/stock/import` | Upload a CSV file to bulk-create stock items |
+
+**Import response body:**
+```json
+{
+  "created": 10,
+  "skipped": 2,
+  "errors": ["Row 5 (P-003): location 'Unknown' not found — skipped."]
+}
+```
+
+**Duplicate detection:**
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/parts/duplicates` | Return groups of parts that share the same normalised name or manufacturer part number |
+
+**Bulk stock relocation:**
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/stock/bulk-move` | Move a list of stock items to a new location or container |
+
+`bulk-move` request body:
+```json
+{
+  "stock_item_ids": ["uuid1", "uuid2"],
+  "location_id": "uuid-of-destination-location"
+}
+```
+Provide either `location_id` or `container_id`, not both.
+
 ---
 
 ## Background job endpoints

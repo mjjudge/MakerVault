@@ -157,5 +157,84 @@ The following decisions have not been finalised. They should be resolved before 
 | Worker task queue | Celery + Redis vs. simple DB-backed queue | Redis adds a dependency; DB queue is simpler for a single-user system |
 | Authentication | Bearer token (static) vs. session cookie vs. OAuth | Single-user system; simplicity preferred over full OAuth |
 | Semantic search | pgvector vs. Qdrant or Chroma | pgvector preferred to avoid a separate service; defer to Phase 5 |
-| Frontend routing | React Router vs. TanStack Router | No strong preference; decide when web app is scaffolded |
+| Frontend routing | React Router vs. TanStack Router | Resolved: React Router in use since Epic 2 |
 | File serving | Serve via API (with auth check) vs. Nginx direct with token | API serving is safer; performance may be a consideration for large files |
+
+---
+
+## ADR-009 — CSV as the primary import/export format
+
+**Status:** Accepted
+
+**Context:**
+Users need a practical way to bulk-load an existing parts inventory and to take
+offline backups of catalogue and stock data without relying on database dumps.
+Multiple format options were considered: JSON, CSV, and spreadsheet formats
+(XLSX).
+
+**Decision:**
+CSV (UTF-8) is the supported import/export format for parts and stock items.
+JSON export is deferred.  XLSX is not supported directly; users are expected to
+export from Excel/Sheets as "CSV UTF-8" before uploading.
+
+**Consequences:**
+- CSV is universally supported by spreadsheet tools and is easy to inspect and
+  edit in a text editor
+- A blank template CSV is provided for each import type so users do not need to
+  know the column layout in advance
+- Import is non-destructive: rows with an existing `part_code` are skipped rather
+  than overwritten; this prevents accidental data loss during re-imports
+- JSON export is straightforward to add in a future epic if needed
+
+---
+
+## ADR-010 — Bulk relocation via a dedicated endpoint
+
+**Status:** Accepted
+
+**Context:**
+Moving stock between locations is a frequent real-world operation (e.g. when
+reorganising the workshop). Doing this one item at a time via PATCH is tedious.
+Options considered: a bulk PATCH on stock items, a separate endpoint, or a
+dedicated "move" event stored in UsageHistory.
+
+**Decision:**
+A dedicated `POST /api/stock/bulk-move` endpoint accepts a list of stock item
+IDs and a single destination (either a location or a container, not both). The
+move is committed atomically. IDs that cannot be found are reported rather than
+causing the whole operation to fail. The move is not recorded in UsageHistory —
+relocation is a physical placement change, not a consumption or lifecycle event.
+
+**Consequences:**
+- Simple, predictable API surface
+- Partial failure is handled gracefully: the caller receives a `not_found` list
+- Not recording moves in UsageHistory keeps history focused on quantity and
+  lifecycle events; if relocation history is needed it can be added as an
+  optional UsageHistory action type in a future epic
+
+---
+
+## ADR-011 — Duplicate detection via name and MPN equality
+
+**Status:** Accepted
+
+**Context:**
+Users may accidentally create duplicate parts (same component, different
+`part_code`). Detecting these early avoids inflated catalogues and inventory
+queries. Options: fuzzy string matching, tsvector similarity, exact name/MPN
+equality.
+
+**Decision:**
+Duplicate detection compares normalised (lowercase, trimmed) part names and
+manufacturer part numbers. Two parts are flagged as potential duplicates if
+they share either attribute. Fuzzy matching (e.g. Levenshtein distance) is
+deferred — it requires an extension or additional library and produces more
+false positives.
+
+**Consequences:**
+- Zero new dependencies
+- Catches the most common duplication pattern (copy-paste of the same part name)
+- Does not catch typos or near-matches; a fuzzy or vector-based approach can be
+  layered on later (see Phase 5 semantic search)
+- Results are advisory only — no automatic merging is performed
+
