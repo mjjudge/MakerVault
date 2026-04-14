@@ -80,7 +80,7 @@ async def hygiene_dashboard(
     # Load all active parts
     # ------------------------------------------------------------------
     parts_result = await db.execute(
-        select(Part).where(Part.is_active == True).order_by(Part.name)  # noqa: E712
+        select(Part).where(Part.is_active.is_(True)).order_by(Part.name)  # noqa: E712
     )
     all_parts: list[Part] = parts_result.scalars().all()
 
