@@ -1,9 +1,5 @@
 # API Specification
 
-> **Status:** Draft direction only. No implementation exists. Endpoint signatures are indicative and subject to change.
-
----
-
 ## Approach
 
 - REST-first API served by FastAPI
