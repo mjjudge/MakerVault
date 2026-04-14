@@ -13,6 +13,7 @@ import { SuggestionsPage } from './pages/SuggestionsPage'
 import { UsageHistoryPage } from './pages/UsageHistoryPage'
 import { ImportExportPage } from './pages/ImportExportPage'
 import { IntakePage } from './pages/IntakePage'
+import { HygienePage } from './pages/HygienePage'
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/history" element={<UsageHistoryPage />} />
           <Route path="/import-export" element={<ImportExportPage />} />
           <Route path="/intake" element={<IntakePage />} />
+          <Route path="/hygiene" element={<HygienePage />} />
         </Routes>
       </main>
     </div>
