@@ -2,7 +2,7 @@
 
 MakerVault is a self-hosted inventory and knowledge system for electronics, IoT, workshop parts, tools, and technical reference material. It helps you track what you own, where it is stored, what it can do, which projects it has been used in, and what you could build with it. The system preserves important technical reference material locally and supports pluggable AI providers rather than hard-coding any single AI vendor.
 
-> **Status:** Active development. Epics 0–10 complete. Core inventory, stock, locations, documents, projects, BOM, search refinement, AI provider abstraction, and AI enrichment are all working. See [BACKLOG.md](BACKLOG.md) for the full roadmap.
+> **Status:** Active development. Epics 0–12 complete. Core inventory, stock, locations, documents, projects, BOM, search refinement, AI provider abstraction, AI enrichment, AI project inspiration, and usage history tracking are all working. See [BACKLOG.md](BACKLOG.md) for the full roadmap.
 
 ---
 
@@ -20,6 +20,8 @@ MakerVault is a self-hosted inventory and knowledge system for electronics, IoT,
 | Resolved placement paths in stock responses | ✅ |
 | AI enrichment jobs (enrich parts and documents on demand) | ✅ |
 | AI project inspiration — "what can I build with what I own?" | ✅ |
+| Usage history — record allocation, consumption, returns, and damage events | ✅ |
+| Stock quantity auto-updated from consumption/return events | ✅ |
 | OpenAPI docs at `/api/docs` | ✅ |
 
 ---

@@ -461,3 +461,55 @@ export const suggestionApi = {
     apiClient.delete(`/suggestions/${id}`),
 }
 
+// ---------------------------------------------------------------------------
+// Usage History (Epic 12)
+// ---------------------------------------------------------------------------
+
+export type UsageActionType =
+  | 'allocated'
+  | 'used'
+  | 'returned'
+  | 'consumed'
+  | 'tested'
+  | 'damaged'
+
+export interface UsageHistoryEvent {
+  id: string
+  stock_item_id: string | null
+  project_id: string | null
+  part_id: string | null
+  action_type: UsageActionType
+  quantity_delta: number | null
+  used_at: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const usageHistoryApi = {
+  list: (params?: {
+    stock_item_id?: string
+    project_id?: string
+    part_id?: string
+    action_type?: string
+    skip?: number
+    limit?: number
+  }) =>
+    apiClient.get<PagedResponse<UsageHistoryEvent>>('/usage', { params }).then(r => r.data),
+
+  get: (id: string) =>
+    apiClient.get<UsageHistoryEvent>(`/usage/${id}`).then(r => r.data),
+
+  create: (data: {
+    action_type: UsageActionType
+    stock_item_id?: string | null
+    project_id?: string | null
+    part_id?: string | null
+    quantity_delta?: number | null
+    used_at?: string | null
+    notes?: string | null
+  }) => apiClient.post<UsageHistoryEvent>('/usage', data).then(r => r.data),
+
+  delete: (id: string) => apiClient.delete(`/usage/${id}`),
+}
+
