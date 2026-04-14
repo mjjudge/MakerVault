@@ -87,11 +87,13 @@ _PACKAGE_PATTERNS: list[tuple[re.Pattern, str]] = [
 ]
 
 # Value patterns:  10k, 100nF, 3.3V, 1uH, etc.
+# Uses \s? (optional single space) instead of \s* to avoid polynomial ReDoS
+# on pathological inputs with many repeated spaces.
 _VALUE_RE = re.compile(
-    r"\b(\d+(?:\.\d+)?)\s*(k|M|G|m|u|µ|n|p)?\s*(ohm|ohms|Ω|F|H|V|A|W|hz|Hz)\b"
-    r"|\b(\d+(?:\.\d+)?)\s*(k|M|G)?\s*(r|R|ohm|ohms)\b"
-    r"|\b(\d+(?:\.\d+)?)\s*(k|K)\b"
-    r"|\b(\d+(?:\.\d+)?)\s*(m|u|µ|n|p)(F|H)\b",
+    r"\b(\d+(?:\.\d+)?)\s?(k|M|G|m|u|µ|n|p)?\s?(ohm|ohms|Ω|F|H|V|A|W|hz|Hz)\b"
+    r"|\b(\d+(?:\.\d+)?)\s?(k|M|G)?\s?(r|R|ohm|ohms)\b"
+    r"|\b(\d+(?:\.\d+)?)\s?(k|K)\b"
+    r"|\b(\d+(?:\.\d+)?)\s?(m|u|µ|n|p)(F|H)\b",
     re.I,
 )
 
@@ -406,6 +408,25 @@ async def find_candidates(
 # Storage suggestion
 # ---------------------------------------------------------------------------
 
+# Minimum Jaccard similarity between description tokens and a part's name
+# tokens for that part to be considered "similar" when building the storage
+# suggestion pool.  0.05 means at least one token in common out of ~20.
+_MIN_STORAGE_SIMILARITY = 0.05
+
+# Fixed confidence boost added to frequency-derived storage scores to ensure
+# that even a single historical placement produces a non-trivial suggestion
+# score (frequency score alone can round to zero for rare placements).
+_STORAGE_CONFIDENCE_BOOST = 20
+
+
+def _storage_score(count: int, total: int) -> int:
+    """Compute a 0–100 storage suggestion confidence score.
+
+    Combines a frequency-derived percentage with a fixed base boost, capped
+    at 100 so the result is always a valid confidence value.
+    """
+    return min(100, int(count / total * 100) + _STORAGE_CONFIDENCE_BOOST)
+
 
 async def suggest_storage(
     description: str,
@@ -442,7 +463,7 @@ async def suggest_storage(
     similar_id_strs: list[str] = []
     for p in all_parts:
         tok = _token_set(p.name) | _token_set(p.short_description)
-        if _jaccard(set(normed.tokens), tok) >= 0.05:
+        if _jaccard(set(normed.tokens), tok) >= _MIN_STORAGE_SIMILARITY:
             # Convert to string regardless of what the ORM returns (UUID or str)
             similar_id_strs.append(str(p.id))
 
@@ -498,13 +519,12 @@ async def suggest_storage(
         ).fetchone()
         if row is None:
             continue
-        score = min(100, int(count / total * 100) + 20)
         suggestions.append(
             {
                 "location_id": uuid.UUID(loc_id_str),
                 "container_id": None,
                 "name": row.name,
-                "score": score,
+                "score": _storage_score(count, total),
                 "reason": f"Used by {count} similar part(s)",
             }
         )
@@ -520,13 +540,12 @@ async def suggest_storage(
         ).fetchone()
         if row is None:
             continue
-        score = min(100, int(count / total * 100) + 20)
         suggestions.append(
             {
                 "location_id": None,
                 "container_id": uuid.UUID(cont_id_str),
                 "name": row.name,
-                "score": score,
+                "score": _storage_score(count, total),
                 "reason": f"Used by {count} similar part(s)",
             }
         )

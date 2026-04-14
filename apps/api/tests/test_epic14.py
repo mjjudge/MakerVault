@@ -294,7 +294,7 @@ def test_score_exact_name_match():
     assert score >= 40, f"Expected high score, got {score}"
 
 
-def test_score_unrelated_part_low(  ):
+def test_score_unrelated_part_low():
     """False-positive guard: completely unrelated part should score < minimum."""
     nd = normalise_description("10k resistor 0603")
     score = score_candidate(
