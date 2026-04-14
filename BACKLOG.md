@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0–7 complete. EPICs 8–10 complete. EPIC 11 next.
+> **Status:** EPICs 0–12 complete.
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -673,27 +673,3 @@ Deliberately not in the early roadmap:
 - Kubernetes or distributed microservice architecture
 
 ---
-
-## Suggested first usable release definition
-
-A good first meaningful release is:
-
-- create Parts
-- create StockItems
-- create nested Locations and Containers
-- place stock physically
-- search for a part and see where it is
-- upload and link a document locally
-- create a Project with BOM entries
-- run everything in Docker
-- run automated tests locally with confidence
-
----
-
-## Immediate next actions
-
-1. Finalise `DATA_MODEL.md` with the small conceptual edits
-2. Add this backlog to the repo
-3. Lock in Docker scaffold expectations
-4. Start EPIC 2 and EPIC 3 in thin slices
-5. Require tests in every implementation PR from the start
