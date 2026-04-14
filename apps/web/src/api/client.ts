@@ -490,8 +490,48 @@ export interface UsageHistoryEvent {
   updated_at: string
 }
 
-export const usageHistoryApi = {
-  list: (params?: {
+// ---------------------------------------------------------------------------
+// Part intake (Epic 14)
+// ---------------------------------------------------------------------------
+
+export interface IntakeCandidate {
+  part_id: string
+  part_code: string
+  name: string
+  short_description: string | null
+  manufacturer: string | null
+  manufacturer_part_number: string | null
+  part_kind: string | null
+  confidence: number
+  match_reason: string
+}
+
+export interface StorageSuggestion {
+  location_id: string | null
+  container_id: string | null
+  name: string
+  score: number
+  reason: string
+}
+
+export interface IntakeMatchResponse {
+  description: string
+  normalised_tokens: string[]
+  candidates: IntakeCandidate[]
+  suggested_part_code: string
+  storage_suggestions: StorageSuggestion[]
+}
+
+export const intakeApi = {
+  match: (description: string, category_id?: string | null) =>
+    apiClient
+      .post<IntakeMatchResponse>('/intake/match', { description, category_id: category_id ?? null })
+      .then(r => r.data),
+  suggestCode: (description: string) =>
+    apiClient
+      .post<{ suggested_part_code: string }>('/intake/suggest-code', { description })
+      .then(r => r.data),
+}
     stock_item_id?: string
     project_id?: string
     part_id?: string

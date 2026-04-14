@@ -12,6 +12,7 @@ import { AISettingsPage } from './pages/AISettingsPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
 import { UsageHistoryPage } from './pages/UsageHistoryPage'
 import { ImportExportPage } from './pages/ImportExportPage'
+import { IntakePage } from './pages/IntakePage'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/suggestions" element={<SuggestionsPage />} />
           <Route path="/history" element={<UsageHistoryPage />} />
           <Route path="/import-export" element={<ImportExportPage />} />
+          <Route path="/intake" element={<IntakePage />} />
         </Routes>
       </main>
     </div>
