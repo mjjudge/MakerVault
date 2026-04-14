@@ -636,6 +636,7 @@ Reduce friction for real-world usage and maintenance.
 - bulk moves
 - basic admin utilities
 - mobile-friendly improvements
+- create any missing user help files and hover-overs. Ensure usage is very clear. create a 'How to' document from the main home / landing page. 
 
 ## Tasks
 - Add import/export formats
@@ -644,12 +645,15 @@ Reduce friction for real-world usage and maintenance.
 - Add duplicate detection helpers
 - Improve small-screen usability
 - Add backup/restore guidance for DB + document store
+- Review all user help files and ensure clear and relevant instructions are in place. create hover-overs and links to user documentation.
+- set product version to v1.0
 
 ## Acceptance criteria
 - A user can import a batch of parts or stock
 - A user can export core data
 - Containers can be labelled and moved in bulk
 - Backup guidance is documented and practical
+- User help is accessible for all screens as well as an overall workflow description available on the landing page. 
 
 ## Tests
 - Import validation tests
