@@ -96,3 +96,28 @@ class StockItemResponse(BaseSchema):
 class StockItemListResponse(BaseSchema):
     items: list[StockItemResponse]
     total: int
+
+
+class BulkMoveRequest(BaseSchema):
+    """Move a set of stock items to a new location or container."""
+
+    stock_item_ids: list[uuid.UUID] = Field(..., min_length=1)
+    location_id: uuid.UUID | None = None
+    container_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def check_single_destination(self) -> "BulkMoveRequest":
+        if self.location_id is not None and self.container_id is not None:
+            raise ValueError(
+                "Provide exactly one destination: either location_id or container_id, not both."
+            )
+        if self.location_id is None and self.container_id is None:
+            raise ValueError(
+                "Provide exactly one destination: either location_id or container_id."
+            )
+        return self
+
+
+class BulkMoveResponse(BaseSchema):
+    moved: int
+    not_found: list[str]

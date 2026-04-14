@@ -14,7 +14,7 @@ def test_default_app_name() -> None:
 
 def test_default_version() -> None:
     settings = Settings()
-    assert settings.app_version == "0.1.0"
+    assert settings.app_version == "1.0.0"
 
 
 def test_debug_defaults_false() -> None:

@@ -226,6 +226,8 @@ export const partsApi = {
   update: (id: string, data: Partial<Part>) =>
     apiClient.patch<Part>(`/parts/${id}`, data).then(r => r.data),
   delete: (id: string) => apiClient.delete(`/parts/${id}`),
+  duplicates: () =>
+    apiClient.get<Array<{ reason: string; parts: Partial<Part>[] }>>('/parts/duplicates').then(r => r.data),
   // Aliases
   listAliases: (partId: string) =>
     apiClient.get<PartAlias[]>(`/parts/${partId}/aliases`).then(r => r.data),
@@ -243,6 +245,8 @@ export const stockApi = {
   update: (id: string, data: Partial<StockItem>) =>
     apiClient.patch<StockItem>(`/stock/${id}`, data).then(r => r.data),
   delete: (id: string) => apiClient.delete(`/stock/${id}`),
+  bulkMove: (body: { stock_item_ids: string[]; location_id?: string | null; container_id?: string | null }) =>
+    apiClient.post<{ moved: number; not_found: string[] }>('/stock/bulk-move', body).then(r => r.data),
 }
 
 export const locationsApi = {

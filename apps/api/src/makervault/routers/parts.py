@@ -107,6 +107,63 @@ async def create_part(
 
 
 @router.get(
+    "/duplicates",
+    summary="Suggest potential duplicate parts",
+)
+async def suggest_duplicates(
+    db: AsyncSession = Depends(get_db_session),
+) -> list[dict]:
+    """Return groups of parts that may be duplicates.
+
+    Duplicate candidates are parts that share the same (case-insensitive)
+    ``name``, or the same non-null ``manufacturer_part_number``.  Each
+    returned group contains at least two parts.
+    """
+    result = await db.execute(select(Part).order_by(Part.name))
+    all_parts = result.scalars().all()
+
+    # Group by normalised name
+    name_groups: dict[str, list[Part]] = {}
+    for p in all_parts:
+        key = p.name.strip().lower()
+        name_groups.setdefault(key, []).append(p)
+
+    # Group by manufacturer_part_number (where non-null)
+    mpn_groups: dict[str, list[Part]] = {}
+    for p in all_parts:
+        if p.manufacturer_part_number:
+            key = p.manufacturer_part_number.strip().lower()
+            mpn_groups.setdefault(key, []).append(p)
+
+    groups: list[dict] = []
+    seen_ids: set[str] = set()
+
+    for key, parts in {**name_groups, **mpn_groups}.items():
+        if len(parts) < 2:
+            continue
+        ids = frozenset(str(p.id) for p in parts)
+        if ids in seen_ids:  # type: ignore[comparison-overlap]
+            continue
+        seen_ids.add(ids)  # type: ignore[arg-type]
+        groups.append({
+            "reason": "same_name" if key in name_groups else "same_mpn",
+            "parts": [
+                {
+                    "id": str(p.id),
+                    "part_code": p.part_code,
+                    "name": p.name,
+                    "manufacturer": p.manufacturer,
+                    "manufacturer_part_number": p.manufacturer_part_number,
+                    "status": p.status,
+                }
+                for p in parts
+            ],
+        })
+
+    return groups
+
+
+@router.get(
     "/{part_id}",
     response_model=PartResponse,
     summary="Get a part by ID",
