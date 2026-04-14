@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     document_store_path: str = "/data/makervault/documents"
 
     # -------------------------------------------------------------------------
+    # Backup
+    # -------------------------------------------------------------------------
+    # Directory where backup archives are written.
+    # Override with BACKUP_PATH to use a separate physical disk or mount.
+    backup_path: str = "/data/makervault/backups"
+
+    # How many completed backups of each type to keep before pruning.
+    # Set to 0 to disable automatic pruning (prune manually via the API).
+    backup_retention_count: int = 10
+
+    # -------------------------------------------------------------------------
     # Security
     # -------------------------------------------------------------------------
     secret_key: str = "insecure-default-change-me"
