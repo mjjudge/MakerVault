@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from makervault import __version__
 from makervault.config import get_settings
 from makervault.routers import ai_providers, categories, containers, documents, enrichment, health, locations, parts, projects, stock
-from makervault.routers import import_export, part_aliases, suggestions, usage_history
+from makervault.routers import import_export, intake, part_aliases, suggestions, usage_history
 
 settings = get_settings()
 
@@ -44,3 +44,4 @@ app.include_router(enrichment.router, prefix="/api")
 app.include_router(suggestions.router, prefix="/api")
 app.include_router(usage_history.router, prefix="/api")
 app.include_router(import_export.router, prefix="/api")
+app.include_router(intake.router, prefix="/api")
