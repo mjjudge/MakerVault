@@ -27,6 +27,8 @@ Design notes
 from __future__ import annotations
 
 import os
+import re
+import shutil
 import subprocess
 import tarfile
 import uuid
@@ -66,16 +68,38 @@ def _parse_db_url(database_url: str) -> dict[str, str]:
     """Extract connection components from a SQLAlchemy-style database URL.
 
     Handles ``postgresql+asyncpg://`` and plain ``postgresql://`` schemes.
+    Validates that the extracted components contain only characters that are
+    safe to pass as individual subprocess arguments (defense-in-depth; the
+    subprocess list form already prevents shell injection).
     """
     # Normalise asyncpg driver prefix so urlparse works correctly
     url = database_url.replace("postgresql+asyncpg://", "postgresql://")
     parsed = urlparse(url)
+
+    host = parsed.hostname or "localhost"
+    port = str(parsed.port or 5432)
+    dbname = (parsed.path or "/makervault").lstrip("/")
+    user = parsed.username or "makervault"
+    password = parsed.password or ""
+
+    # Validate: host must be a valid hostname or IPv4/IPv6 address
+    if not re.fullmatch(r"[A-Za-z0-9._\-\[\]:]+", host):
+        raise ValueError(f"DATABASE_URL contains an unsafe hostname: {host!r}")
+    # Validate: port must be a positive integer
+    if not re.fullmatch(r"\d{1,5}", port) or not (1 <= int(port) <= 65535):
+        raise ValueError(f"DATABASE_URL contains an invalid port: {port!r}")
+    # Validate: user and dbname must not contain shell-special characters
+    if not re.fullmatch(r"[A-Za-z0-9_.\-]+", user):
+        raise ValueError(f"DATABASE_URL contains an unsafe username: {user!r}")
+    if not re.fullmatch(r"[A-Za-z0-9_.\-]+", dbname):
+        raise ValueError(f"DATABASE_URL contains an unsafe database name: {dbname!r}")
+
     return {
-        "host": parsed.hostname or "localhost",
-        "port": str(parsed.port or 5432),
-        "dbname": (parsed.path or "/makervault").lstrip("/"),
-        "user": parsed.username or "makervault",
-        "password": parsed.password or "",
+        "host": host,
+        "port": port,
+        "dbname": dbname,
+        "user": user,
+        "password": password,
     }
 
 
@@ -206,7 +230,6 @@ def run_full_backup(
 
     finally:
         # Clean up staging directory
-        import shutil
         shutil.rmtree(str(staging_dir), ignore_errors=True)
 
     size = output_file.stat().st_size
