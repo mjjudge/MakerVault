@@ -136,15 +136,15 @@ async def suggest_duplicates(
             mpn_groups.setdefault(key, []).append(p)
 
     groups: list[dict] = []
-    seen_ids: set[str] = set()
+    seen_ids: set[frozenset[str]] = set()
 
     for key, parts in {**name_groups, **mpn_groups}.items():
         if len(parts) < 2:
             continue
         ids = frozenset(str(p.id) for p in parts)
-        if ids in seen_ids:  # type: ignore[comparison-overlap]
+        if ids in seen_ids:
             continue
-        seen_ids.add(ids)  # type: ignore[arg-type]
+        seen_ids.add(ids)
         groups.append({
             "reason": "same_name" if key in name_groups else "same_mpn",
             "parts": [

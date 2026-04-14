@@ -253,7 +253,10 @@ async def import_parts_csv(
                 notes=(row.get("notes") or "").strip() or None,
             )
         except Exception as exc:
-            errors.append(f"Row {row_num} ({part_code}): validation error — {exc}")
+            # Sanitise the exception message — expose only the first line to avoid
+            # leaking internal stack information.
+            first_line = str(exc).split("\n")[0][:200]
+            errors.append(f"Row {row_num} ({part_code}): validation error — {first_line}")
             skipped += 1
             continue
 
@@ -262,7 +265,9 @@ async def import_parts_csv(
             if db.sync_session.get_bind().dialect.name != "postgresql":
                 data.pop("aliases", None)
                 data.pop("tags", None)
-        except Exception:
+        except AttributeError:
+            # Dialect introspection not available (e.g. async session wrapper);
+            # leave the data as-is and let the ORM handle it.
             pass
 
         part = Part(**data)
@@ -516,7 +521,10 @@ async def import_stock_csv(
                 notes=(row.get("notes") or "").strip() or None,
             )
         except Exception as exc:
-            errors.append(f"Row {row_num} ({part_code}): validation error — {exc}")
+            # Sanitise the exception message — expose only the first line to avoid
+            # leaking internal stack information.
+            first_line = str(exc).split("\n")[0][:200]
+            errors.append(f"Row {row_num} ({part_code}): validation error — {first_line}")
             skipped += 1
             continue
 

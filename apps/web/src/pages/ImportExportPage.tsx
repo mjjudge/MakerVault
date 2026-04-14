@@ -207,7 +207,7 @@ export function ImportExportPage() {
 
         {importParts.isError && (
           <div className="alert alert-error" style={{ marginTop: '1rem' }}>
-            {String((importParts.error as { message?: string })?.message ?? 'Import failed.')}
+            {String((importParts.error as { message?: string })?.message ?? 'Import failed. Please check your CSV format and try again.')}
           </div>
         )}
         {importParts.isSuccess && importParts.data && (
@@ -284,7 +284,7 @@ export function ImportExportPage() {
 
         {importStock.isError && (
           <div className="alert alert-error" style={{ marginTop: '1rem' }}>
-            {String((importStock.error as { message?: string })?.message ?? 'Import failed.')}
+            {String((importStock.error as { message?: string })?.message ?? 'Import failed. Please check your CSV format and try again.')}
           </div>
         )}
         {importStock.isSuccess && importStock.data && (
