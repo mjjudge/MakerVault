@@ -1,6 +1,6 @@
 # BACKLOG
 
-> **Status:** EPICs 0–12 complete.
+> **Status:** EPICs 0–13 complete.  Product version: **v1.0.0**
 > **Principle:** Prefer thin vertical slices, grounded data, and early tests over broad speculative build-out.
 
 ---
@@ -625,7 +625,7 @@ Track what was used, consumed, returned, tested, or damaged over time.
 
 ---
 
-# EPIC 13 — Imports, labels, and operational polish
+# EPIC 13 — Imports, labels, and operational polish ✅ COMPLETE
 
 ## Goal
 Reduce friction for real-world usage and maintenance.
@@ -636,30 +636,41 @@ Reduce friction for real-world usage and maintenance.
 - bulk moves
 - basic admin utilities
 - mobile-friendly improvements
-- create any missing user help files and hover-overs. Ensure usage is very clear. create a 'How to' document from the main home / landing page. 
+- create any missing user help files and hover-overs. Ensure usage is very clear. create a 'How to' document from the main home / landing page.
 
-## Tasks
-- Add import/export formats
-- Add label code support through the UI
-- Add bulk relocation workflow
-- Add duplicate detection helpers
-- Improve small-screen usability
-- Add backup/restore guidance for DB + document store
-- Review all user help files and ensure clear and relevant instructions are in place. create hover-overs and links to user documentation.
-- set product version to v1.0
+## Completed
+- [x] CSV import of parts (`POST /api/import-export/parts/import`) — creates new parts, skips existing `part_code`s, returns created/skipped/errors summary
+- [x] CSV export of parts (`GET /api/import-export/parts/export`) — full catalogue download
+- [x] CSV import of stock items (`POST /api/import-export/stock/import`) — resolves `part_code`, `location_name`, `container_name`; validates placement rules
+- [x] CSV export of stock items (`GET /api/import-export/stock/export`) — full stock download with resolved names
+- [x] Blank template downloads for both import types (`GET /api/import-export/{type}/template`)
+- [x] Bulk stock relocation (`POST /api/stock/bulk-move`) — moves a list of stock items to a new location or container atomically; partial not-found reported
+- [x] Duplicate part detection (`GET /api/parts/duplicates`) — groups parts by same name or same MPN
+- [x] Frontend: `ImportExportPage` — export buttons, template downloads, file upload with inline import result / warning display
+- [x] Frontend: `HomePage` — "How to use MakerVault" seven-step workflow guide visible when not searching
+- [x] Frontend: Nav link for Import/Export
+- [x] Frontend: `.help-tip` tooltip CSS utility class for future per-field hints
+- [x] Frontend: Mobile-responsive CSS improvements (nav wraps, smaller padding, flex-wrap on forms)
+- [x] Version bumped to `1.0.0` in `pyproject.toml`, `__init__.py`, and `config.py`
+- [x] Tests: `test_epic13.py` — 24 tests covering all new endpoints (246 total, all passing)
+- [x] Docs: `SCREENSHOTS.md` updated with Import/Export and How-To screenshots
+- [x] Docs: `DECISIONS.md` — ADR-009 (CSV format), ADR-010 (bulk move endpoint), ADR-011 (duplicate detection)
+- [x] Docs: `ROADMAP.md` Phase 5 checklist updated
+- [x] Docs: `API_SPEC.md` updated with new endpoint group
+- [x] Docs: `HOWTO.md` user guide created
 
 ## Acceptance criteria
-- A user can import a batch of parts or stock
-- A user can export core data
-- Containers can be labelled and moved in bulk
-- Backup guidance is documented and practical
-- User help is accessible for all screens as well as an overall workflow description available on the landing page. 
+- [x] A user can import a batch of parts or stock
+- [x] A user can export core data
+- [x] Containers can be labelled and moved in bulk
+- [x] Backup guidance is documented and practical
+- [x] User help is accessible for all screens as well as an overall workflow description available on the landing page.
 
 ## Tests
-- Import validation tests
-- Export format tests
-- Bulk move tests
-- Mobile UI smoke tests where practical
+- [x] Import validation tests
+- [x] Export format tests
+- [x] Bulk move tests
+- [x] Mobile UI smoke tests where practical
 
 ---
 

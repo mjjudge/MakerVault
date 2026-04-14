@@ -76,16 +76,16 @@ This roadmap is broken into phases. Each phase should be functional and stable b
 
 ## Phase 5 — Polish, imports, mobile workflows, and scanning
 
-- [ ] Import from CSV or spreadsheet (basic mapping)
+- [x] Import from CSV or spreadsheet (basic mapping)
 - [ ] QR code or barcode label generation for containers and parts
-- [ ] Responsive design review and mobile usability improvements
+- [x] Responsive design review and mobile usability improvements
 - [ ] Semantic / vector search (pgvector or similar)
-- [ ] Bulk operations (move stock, update quantities)
-- [ ] Project status tracking and BOM completion view (using ProjectPart `is_owned`)
+- [x] Bulk operations (move stock, update quantities)
+- [x] Project status tracking and BOM completion view (using ProjectPart `is_owned`)
 - [x] Usage history view per part or project (UsageHistory)
-- [ ] Data export (JSON, CSV)
+- [x] Data export (JSON, CSV)
 - [ ] Performance and reliability hardening
-- [ ] Documentation review and user-facing help content
+- [x] Documentation review and user-facing help content
 
 ---
 

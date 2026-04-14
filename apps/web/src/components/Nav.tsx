@@ -33,6 +33,9 @@ export function Nav() {
       <NavLink to="/history" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
         History
       </NavLink>
+      <NavLink to="/import-export" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+        Import/Export
+      </NavLink>
     </nav>
   )
 }

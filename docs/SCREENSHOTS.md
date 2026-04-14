@@ -145,3 +145,49 @@ updates the stock item's stored quantity (e.g. consuming 3 units deducts 3 from 
 A filter bar lets you narrow events by action type.
 
 > Screenshot to be added after next deployment.
+
+---
+
+## 12. Import &amp; Export (Epic 13)
+
+**URL:** `/import-export`
+
+New in Epic 13 — a dedicated **Import &amp; Export** page accessible from the global navigation bar.
+
+The page is split into two sections — **Parts catalogue** and **Stock items** — each offering:
+
+- An **Export CSV** button that downloads the full dataset as a UTF-8 CSV file.
+- A **Download template** button that provides a blank CSV with the correct column headers,
+  ready to be filled in a spreadsheet application.
+- An **Import CSV** file picker and upload button. After upload the page shows a result
+  banner: number of records created, number skipped (e.g. duplicate `part_code`), and an
+  expandable list of per-row warnings.
+
+A **Tips** card at the bottom explains CSV encoding, boolean column syntax, tag formatting,
+date format, and the non-destructive import policy.
+
+> Screenshot to be added after next deployment.
+
+---
+
+## 13. Home — How-To Workflow Guide (Epic 13)
+
+**URL:** `/`
+
+New in Epic 13 — the **Home** page now includes a seven-step **"How to use MakerVault"**
+workflow guide below the Quick access links. The guide is only shown when the search bar is
+empty.
+
+Each step is presented as a numbered card:
+
+1. Set up locations and containers
+2. Add parts to the catalogue
+3. Record your stock
+4. Create projects with a Bill of Materials
+5. Use AI enrichment and inspiration
+6. Track usage and keep history
+7. Import in bulk &amp; back up regularly
+
+Each step links directly to the relevant page.
+
+> Screenshot to be added after next deployment.

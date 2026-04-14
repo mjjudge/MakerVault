@@ -2,7 +2,7 @@
 
 MakerVault is a self-hosted inventory and knowledge system for electronics, IoT, workshop parts, tools, and technical reference material. It helps you track what you own, where it is stored, what it can do, which projects it has been used in, and what you could build with it. The system preserves important technical reference material locally and supports pluggable AI providers rather than hard-coding any single AI vendor.
 
-> **Status:** Active development. Epics 0–12 complete. Core inventory, stock, locations, documents, projects, BOM, search refinement, AI provider abstraction, AI enrichment, AI project inspiration, and usage history tracking are all working. See [BACKLOG.md](BACKLOG.md) for the full roadmap.
+> **Status:** Active development. Epics 0–13 complete. **v1.0.0** — Core inventory, stock, locations, documents, projects, BOM, search refinement, AI provider abstraction, AI enrichment, AI project inspiration, usage history tracking, CSV import/export, bulk stock relocation, and duplicate detection are all working. See [BACKLOG.md](BACKLOG.md) for the full roadmap.
 
 ---
 
@@ -22,6 +22,12 @@ MakerVault is a self-hosted inventory and knowledge system for electronics, IoT,
 | AI project inspiration — "what can I build with what I own?" | ✅ |
 | Usage history — record allocation, consumption, returns, and damage events | ✅ |
 | Stock quantity auto-updated from consumption/return events | ✅ |
+| CSV import of parts and stock items | ✅ |
+| CSV export of parts and stock items | ✅ |
+| Bulk stock relocation (`POST /api/stock/bulk-move`) | ✅ |
+| Duplicate part detection (`GET /api/parts/duplicates`) | ✅ |
+| How-To workflow guide on home page | ✅ |
+| Mobile-responsive layout | ✅ |
 | OpenAPI docs at `/api/docs` | ✅ |
 
 ---
@@ -90,6 +96,8 @@ Once running:
 | API Docs | http://localhost/api/docs |
 
 To stop: `docker compose -f infra/docker/docker-compose.yml down` or `make down`.
+
+For a step-by-step guide to setting up locations, adding parts, and using all features, see [`docs/HOWTO.md`](docs/HOWTO.md).
 
 ---
 
@@ -160,6 +168,7 @@ MakerVault/
 │   ├── API_SPEC.md
 │   ├── UX_NOTES.md
 │   ├── DECISIONS.md
+│   ├── HOWTO.md
 │   └── SCREENSHOTS.md
 ├── infra/
 │   ├── docker/       # Docker Compose and service configs
@@ -172,7 +181,12 @@ MakerVault/
 
 ## Next steps
 
-1. Epic 12 — Usage history and stock lifecycle
-2. Epic 13 — Imports, labels, and operational polish
+Epics 0–13 are complete (v1.0.0). The remaining roadmap items include:
+
+- QR / barcode label generation for containers
+- Semantic / vector search (pgvector)
+- Performance and reliability hardening
+- Authentication layer for multi-user or internet-exposed deployments
 
 See [`BACKLOG.md`](BACKLOG.md) for the full phased plan and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased roadmap.
+See [`docs/HOWTO.md`](docs/HOWTO.md) for a step-by-step usage guide.

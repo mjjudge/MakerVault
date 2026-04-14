@@ -12,6 +12,8 @@ from makervault.models.location import Location
 from makervault.models.part import Part
 from makervault.models.stock_item import StockItem
 from makervault.schemas.stock_item import (
+    BulkMoveRequest,
+    BulkMoveResponse,
     StockItemCreate,
     StockItemListResponse,
     StockItemResponse,
@@ -197,3 +199,48 @@ async def delete_stock_item(
             detail=f"StockItem {stock_item_id} not found.",
         )
     await db.delete(item)
+
+
+@router.post(
+    "/bulk-move",
+    response_model=BulkMoveResponse,
+    summary="Move multiple stock items to a new location or container",
+)
+async def bulk_move_stock(
+    body: BulkMoveRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> BulkMoveResponse:
+    """Relocate a batch of stock items in a single request.
+
+    All items in ``stock_item_ids`` are moved to the supplied
+    ``location_id`` or ``container_id``.  Items that cannot be found are
+    reported in the ``not_found`` list; the rest are updated atomically.
+    """
+    # Validate the destination exists
+    if body.location_id is not None:
+        if await db.get(Location, body.location_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Location {body.location_id} not found.",
+            )
+    if body.container_id is not None:
+        if await db.get(Container, body.container_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Container {body.container_id} not found.",
+            )
+
+    moved = 0
+    not_found: list[str] = []
+
+    for item_id in body.stock_item_ids:
+        item = await db.get(StockItem, item_id)
+        if item is None:
+            not_found.append(str(item_id))
+            continue
+        item.location_id = body.location_id
+        item.container_id = body.container_id
+        moved += 1
+
+    await db.flush()
+    return BulkMoveResponse(moved=moved, not_found=not_found)
