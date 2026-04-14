@@ -89,6 +89,26 @@ This roadmap is broken into phases. Each phase should be functional and stable b
 
 ---
 
+---
+
+## Phase 6 — Smart intake, hygiene, and operational resilience
+
+- [ ] Assisted part intake: free-text description → candidate match list + suggested part code (Epic 14)
+- [ ] Part code generation service with uniqueness guarantee (Epic 14)
+- [ ] Duplicate/similarity detection at intake time with confidence scoring (Epic 14)
+- [ ] "Add stock to existing part" shortcut from the intake workflow (Epic 14)
+- [ ] Storage suggestion based on historical placement patterns (Epic 14)
+- [ ] Inventory hygiene dashboard: missing documents, aliases, capabilities (Epic 15)
+- [ ] "Parts stored in multiple locations" split-stock insight (Epic 15)
+- [ ] "Possible duplicates" review queue in the UI (Epic 15)
+- [ ] Part merge workflow: safely consolidate duplicate Part records (Epic 15)
+- [ ] `BackupRecord` model and API endpoints (Epic 16)
+- [ ] Backup status widget showing last successful DB and document backup (Epic 16)
+- [ ] Scheduled backup job in the worker with failure recording (Epic 16)
+- [ ] Restore instructions page/export (Epic 16)
+
+---
+
 ## Future / deferred ideas
 
 These are not planned for early phases but are worth noting:

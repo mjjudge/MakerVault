@@ -42,9 +42,41 @@ right bin without opening the inventory system.
 
 ## Building your parts catalogue
 
-### 4. Add parts
+### 4. Add parts the smart way (assisted intake)
 
-Go to **Parts** and click **+ New Part**. Fill in at minimum:
+Go to **Parts** and click **+ Add Part**. You can fill in the form manually, or
+use the **Smart Intake** field at the top of the form.
+
+Type a plain-English description of what you are adding, for example:
+
+- `10k resistor 0603`
+- `ESP32 dev board`
+- `DHT22 temperature sensor`
+
+MakerVault will:
+
+1. Search your existing catalogue for close matches and show you ranked
+   candidates with confidence scores.
+2. If nothing matches well enough, suggest a unique human-readable part code
+   (e.g. `RES-10K-0603-001`).
+3. Suggest a storage location or container based on where you have put similar
+   parts in the past.
+
+You then choose one of three actions:
+
+| Action | What happens |
+|---|---|
+| **Use existing** | No new part is created. You are taken directly to the matched part to add a new stock item. |
+| **Create new** | A new Part is created with the suggested code, pre-filled tags and aliases. |
+| **Dismiss** | Nothing is saved. You can fill in the form manually. |
+
+> **Nothing is created until you confirm.** Suggestions are advisory and require
+> your explicit approval before any record is written.
+
+### 5. Add parts manually
+
+If you prefer to enter everything yourself, go to **Parts** and click
+**+ New Part**. Fill in at minimum:
 
 - **Part Code** — your internal identifier (e.g. `RES-10K-0603`)
 - **Name** — a human-readable name (e.g. "10kΩ 0603 Resistor")
@@ -58,7 +90,7 @@ Other useful fields:
 | Tags | Free-form labels for filtering (e.g. `smd,resistor`) |
 | Notes | Anything that doesn't fit elsewhere |
 
-### 5. Attach documents
+### 6. Attach documents
 
 From a part's detail page, scroll to the **Documents** section. You can:
 
@@ -68,7 +100,7 @@ From a part's detail page, scroll to the **Documents** section. You can:
 Documents are stored on the Docker volume and are never lost if the external
 URL goes away.
 
-### 6. Add aliases
+### 7. Add aliases
 
 If a part is also known by other names or part numbers (e.g. "ESP-WROOM-32"
 for an ESP32 board), add them in the **Aliases** panel. Aliases make the part
@@ -78,7 +110,7 @@ findable under any of its names in the global search bar.
 
 ## Tracking physical stock
 
-### 7. Record stock items
+### 8. Record stock items
 
 Each physical batch of a part is a **Stock Item**. From a part's detail page,
 click **+ Add Stock Item** and fill in:
@@ -87,7 +119,7 @@ click **+ Add Stock Item** and fill in:
 - **Location** or **Container** — exactly one is required
 - Optional: condition, purchase date, price, supplier, serial number
 
-### 8. Move stock
+### 9. Move stock
 
 To move a single item, open the stock item and update its location/container.
 
@@ -108,12 +140,12 @@ found.
 
 ## Projects and Bill of Materials
 
-### 9. Create a project
+### 10. Create a project
 
 Go to **Projects** and click **+ New Project**. Give it a name and an optional
 description and status.
 
-### 10. Build a BOM
+### 11. Build a BOM
 
 From the project detail page, click **+ Add Part to BOM**, search for a part by
 name or code, set the required quantity, and click Add.
@@ -125,7 +157,7 @@ time to show whether you have enough stock for every part.
 
 ## AI features (optional)
 
-### 11. Configure an AI provider
+### 12. Configure an AI provider
 
 Go to **AI Settings** and click **+ Add Provider**. MakerVault supports:
 
@@ -142,7 +174,7 @@ The API key is never stored in the database — only the environment variable
 OPENAI_API_KEY=sk-...
 ```
 
-### 12. Enrich a part
+### 13. Enrich a part
 
 Open a part that has a datasheet attached. Click **Run Enrichment** in the
 Enrichment panel to send the document text to your AI provider for analysis.
@@ -156,7 +188,7 @@ The AI will suggest:
 Review and apply or dismiss each suggestion. Nothing is saved without your
 confirmation.
 
-### 13. Get project inspiration
+### 14. Get project inspiration
 
 Go to **Inspire** and describe what you want to build. MakerVault sends your
 current inventory to the AI and asks for project ideas that make use of the
@@ -167,7 +199,7 @@ are missing.
 
 ## Bulk import
 
-### 14. Import parts from a spreadsheet
+### 15. Import parts from a spreadsheet
 
 1. Go to **Import / Export** and download the **parts template**.
 2. Open the template in Excel or Google Sheets and fill in your parts.
@@ -182,7 +214,7 @@ Rules:
   or `yes`/`no`.
 - Tags are comma-separated in a single cell: `microcontroller,wifi,smd`.
 
-### 15. Import stock from a spreadsheet
+### 16. Import stock from a spreadsheet
 
 1. Download the **stock template**.
 2. Fill in at minimum `part_code` and either `location_name` or `container_name`
@@ -197,13 +229,13 @@ before importing stock.
 
 ## Exporting and backup
 
-### 16. Export to CSV
+### 17. Export to CSV
 
 Click **Export parts CSV** or **Export stock CSV** on the Import / Export page.
 These downloads give you a point-in-time snapshot of your entire catalogue and
 stock in a format readable by any spreadsheet application.
 
-### 17. Back up the database and document store
+### 18. Back up the database and document store
 
 MakerVault stores all data in two places:
 
@@ -237,12 +269,69 @@ significant changes is a practical strategy for a single-user system.
 
 ---
 
-## Finding potential duplicates
+### 19. Monitor backup status
+
+Go to **Admin → Backup Status** to see when MakerVault was last successfully
+backed up. The panel shows:
+
+- Last full backup date and size
+- Last database-only backup
+- Last documents-only backup
+- Any recorded failures with their error messages
+
+Each time you run the backup script above, the script registers the result via
+`POST /api/backups` so that the status page stays up to date. You can also
+trigger a backup from the UI by clicking **Run Backup Now** — this enqueues a
+worker job and updates the status once it completes.
+
+If the "Last backup" date is more than a week old, the panel shows a warning.
+
+---
+
+## Keeping your inventory clean
+
+### 20. Review the hygiene dashboard
+
+Go to **Admin → Inventory Health** to see a summary of data quality issues:
+
+| Issue | What it means |
+|---|---|
+| **Duplicate candidates** | Parts that share the same name or MPN — possible duplicates |
+| **Split stock** | Parts with stock spread across multiple locations |
+| **Needs review** | Parts flagged by an automated process for human attention |
+| **No documents** | Parts with no datasheet, pinout, or other reference attached |
+| **No aliases** | Parts with no alternate names or search terms |
+| **No capabilities** | Parts with no structured spec data |
+
+Click any category to drill into the affected parts.
+
+### 21. Resolve duplicate parts
+
+From the **Duplicate Candidates** list, review each group. When you are certain
+two entries are the same component:
+
+1. Open the part you want to keep.
+2. Click **Merge into this part** and select the duplicate to absorb.
+3. Confirm the merge.
+
+MakerVault will move all stock items, aliases, capabilities, and document links
+from the duplicate to the surviving part and then delete the duplicate. This
+operation cannot be undone, so review carefully first.
+
+### 22. Review split-stock
+
+Parts listed on the **Split Stock** page have physical stock in more than one
+location. This is sometimes intentional (one batch in the workshop, one in
+storage). If it is not, use the bulk move endpoint or the per-item move button
+to consolidate.
+
+---
+
+## Finding potential duplicates (quick path)
 
 Go to the API docs (`/api/docs`) and call `GET /api/parts/duplicates` to get a
 list of part groups that share the same name or manufacturer part number. Review
-each group and either merge them (currently a manual process) or rename one to
-make them distinct.
+each group in the UI or use the merge workflow described above.
 
 ---
 
@@ -254,5 +343,7 @@ make them distinct.
   entire system.
 - The **History** page lets you record and review stock usage events linked to
   projects.
+- The **Inventory Health** page surfaces data quality issues without requiring
+  direct API access.
 - The **API docs** at `/api/docs` (FastAPI Swagger UI) let you explore and test
   every endpoint interactively.

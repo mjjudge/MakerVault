@@ -139,3 +139,19 @@ All services communicate over the private `makervault_net` bridge network. Only 
 - **Semantic search:** pgvector extension on PostgreSQL is the preferred path to avoid a separate vector database. Deferred to Phase 5.
 - **Mobile:** Responsive web design is the initial approach. A dedicated mobile app is a non-goal for now.
 - **Multi-user:** The system is designed for a single operator. Multi-user support is a non-goal for the initial phase but should not be actively designed against.
+
+---
+
+## Phase 6 additions (Epics 14–16)
+
+### Assisted intake service
+
+A new `intake_service` in `apps/api/src/makervault/` will handle free-text part descriptions. It normalises input, searches existing parts for candidates (using full-text and fuzzy matching), generates a unique part code suggestion, and queries historical stock placement patterns to suggest a likely storage location. Results are returned as an `IntakeSuggestion` and require explicit user confirmation before any record is created.
+
+### Inventory hygiene service
+
+A `hygiene_service` will compute and cache inventory health metrics: duplicate candidates, split-stock parts, weak-metadata flags, and the `needs_review` queue. Metrics are surfaced as a summary dashboard and per-category detail pages. Part merge is a dedicated transactional endpoint that moves all linked records (stock, aliases, capabilities, documents) from a source part to a target and deletes the source.
+
+### Backup scheduling and records
+
+The worker will optionally run a scheduled backup job (cron-style, configured via environment variables). Each backup attempt — whether triggered by the scheduler, the API, or a manual script — writes a `BackupRecord` to the database via `POST /api/backups`. The API exposes backup status at `GET /api/backups/latest`. Backup execution uses Docker-native volume snapshots (see backup guidance in `HOWTO.md`).

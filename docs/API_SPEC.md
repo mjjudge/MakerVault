@@ -188,6 +188,95 @@ The worker process does not expose HTTP endpoints directly. Jobs are dispatched 
 
 ---
 
+### Part intake *(Epic 14)*
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/parts/intake` | Accept a free-text part description; return candidate matching parts ranked by confidence and a suggested new part code |
+| POST | `/api/parts/intake/apply` | Apply an intake decision: create a new part from a suggestion or add stock to an existing part |
+| GET | `/api/parts/intake/{id}` | Get a previously saved `IntakeSuggestion` record |
+| GET | `/api/parts/intake` | List recent intake suggestions |
+
+**Intake request body:**
+```json
+{
+  "description": "10k resistor 0603"
+}
+```
+
+**Intake response body:**
+```json
+{
+  "suggestion_id": "uuid",
+  "normalised_text": "10k resistor 0603",
+  "suggested_part_code": "RES-10K-0603-001",
+  "candidates": [
+    { "part_id": "uuid", "name": "10kΩ 0603 Resistor", "score": 0.92 }
+  ],
+  "suggested_placement": { "container_id": "uuid", "container_name": "Drawer 3" }
+}
+```
+
+---
+
+### Inventory hygiene *(Epic 15)*
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/hygiene/summary` | Return a dashboard summary of inventory health issues |
+| GET | `/api/hygiene/split-stock` | List parts whose stock is spread across multiple locations |
+| GET | `/api/hygiene/needs-review` | List parts flagged `needs_review = true` |
+| GET | `/api/hygiene/weak-metadata` | List parts missing documents, aliases, or capabilities |
+| POST | `/api/parts/{id}/merge` | Merge a duplicate part into this part; stock items, aliases, and documents are moved; the duplicate is deleted |
+
+**Hygiene summary response body:**
+```json
+{
+  "duplicate_candidates": 3,
+  "split_stock_parts": 5,
+  "needs_review": 12,
+  "no_documents": 47,
+  "no_aliases": 31,
+  "no_capabilities": 28,
+  "missing_placement": 0
+}
+```
+
+**Merge request body:**
+```json
+{
+  "source_part_id": "uuid-of-part-to-absorb-and-delete"
+}
+```
+
+---
+
+### Backups *(Epic 16)*
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/backups` | List backup records (most recent first) |
+| POST | `/api/backups` | Create a backup record (used by backup scripts to register a completed backup) |
+| GET | `/api/backups/latest` | Get the most recent completed backup of each type |
+| GET | `/api/backups/{id}` | Get a specific backup record |
+| POST | `/api/backups/trigger` | Request that the worker performs a backup now |
+
+**Backup record body:**
+```json
+{
+  "backup_type": "full",
+  "triggered_by": "scheduled",
+  "status": "completed",
+  "started_at": "2026-04-14T02:00:00Z",
+  "completed_at": "2026-04-14T02:01:23Z",
+  "db_snapshot_path": "backups/db-20260414.tar.gz",
+  "documents_snapshot_path": "backups/docs-20260414.tar.gz",
+  "size_bytes": 204800
+}
+```
+
+---
+
 ## Notes
 
 - Pagination: list endpoints should support `limit` and `offset` (or cursor-based pagination — TBD)
