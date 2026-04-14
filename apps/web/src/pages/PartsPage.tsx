@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { partsApi, type Part } from '../api/client'
+import { Link, useSearchParams } from 'react-router-dom'
+import { partsApi, intakeApi, type Part, type IntakeCandidate } from '../api/client'
 
 const DEFAULT_FORM = {
   part_code: '',
@@ -14,11 +14,25 @@ const DEFAULT_FORM = {
 
 export function PartsPage() {
   const qc = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [q, setQ] = useState('')
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<typeof DEFAULT_FORM>(DEFAULT_FORM)
   const [error, setError] = useState('')
+  const [suggestingCode, setSuggestingCode] = useState(false)
+  const [codeWarning, setCodeWarning] = useState<IntakeCandidate[] | null>(null)
+
+  // Auto-open create modal when ?new=1 is present (e.g. from Intake page)
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      const preCode = searchParams.get('part_code') ?? ''
+      setForm(f => ({ ...f, part_code: preCode }))
+      setShowModal(true)
+      // Remove query params so a refresh doesn't re-open
+      setSearchParams({}, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, isLoading } = useQuery({
     queryKey: ['parts', 'list', search],
@@ -46,6 +60,23 @@ export function PartsPage() {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
     createMutation.mutate(form)
+  }
+
+  const handleSuggestCode = async () => {
+    const desc = [form.name, form.short_description].filter(Boolean).join(' ').trim()
+    if (!desc) return
+    setSuggestingCode(true)
+    setCodeWarning(null)
+    try {
+      const result = await intakeApi.match(desc)
+      setForm(f => ({ ...f, part_code: result.suggested_part_code }))
+      const highConf = result.candidates.filter(c => c.confidence >= 50)
+      if (highConf.length > 0) setCodeWarning(highConf)
+    } catch {
+      // silently ignore — user can still type a code manually
+    } finally {
+      setSuggestingCode(false)
+    }
   }
 
   return (
@@ -127,22 +158,12 @@ export function PartsPage() {
             {error && <div className="alert alert-error">{error}</div>}
             <form onSubmit={handleCreate}>
               <div className="form-group">
-                <label className="form-label">Part Code *</label>
-                <input
-                  className="form-control"
-                  required
-                  value={form.part_code}
-                  onChange={e => setForm(f => ({ ...f, part_code: e.target.value }))}
-                  placeholder="ESP32-DEVKIT-V1"
-                />
-              </div>
-              <div className="form-group">
                 <label className="form-label">Name *</label>
                 <input
                   className="form-control"
                   required
                   value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setCodeWarning(null) }}
                   placeholder="ESP32 DevKit V1"
                 />
               </div>
@@ -151,8 +172,48 @@ export function PartsPage() {
                 <input
                   className="form-control"
                   value={form.short_description ?? ''}
-                  onChange={e => setForm(f => ({ ...f, short_description: e.target.value }))}
+                  onChange={e => { setForm(f => ({ ...f, short_description: e.target.value })); setCodeWarning(null) }}
                 />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Part Code *</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    className="form-control"
+                    required
+                    value={form.part_code}
+                    onChange={e => { setForm(f => ({ ...f, part_code: e.target.value })); setCodeWarning(null) }}
+                    placeholder="e.g. ESP32-DEVKIT-V1 or click Suggest →"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                    disabled={suggestingCode || !form.name.trim()}
+                    onClick={handleSuggestCode}
+                    title="Generate a unique code from the name/description and check for similar existing parts"
+                  >
+                    {suggestingCode ? '…' : 'Suggest'}
+                  </button>
+                </div>
+                {codeWarning && codeWarning.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', padding: '0.6rem 0.75rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.8rem' }}>
+                    <strong style={{ color: '#92400e' }}>⚠ Similar parts already in your database</strong>
+                    <ul style={{ margin: '0.3rem 0 0.4rem 1rem', padding: 0, color: '#78350f' }}>
+                      {codeWarning.slice(0, 3).map(c => (
+                        <li key={c.part_id}>
+                          <strong>{c.part_code}</strong> — {c.name}
+                          {' '}<span style={{ color: '#b45309' }}>({c.confidence}% match)</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <span style={{ color: '#92400e' }}>
+                      Check the{' '}
+                      <Link to="/intake" style={{ color: '#d97706', fontWeight: 600 }}>Intake page</Link>
+                      {' '}to confirm this isn't a duplicate before adding.
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Manufacturer</label>
@@ -186,7 +247,7 @@ export function PartsPage() {
                 <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
                   {createMutation.isPending ? 'Creating…' : 'Create Part'}
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); setError('') }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); setError(''); setCodeWarning(null) }}>
                   Cancel
                 </button>
               </div>

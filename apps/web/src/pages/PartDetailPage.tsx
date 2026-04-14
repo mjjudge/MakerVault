@@ -1,16 +1,27 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { partsApi, stockApi, documentsApi, type Part, type StockItem, type PartDocumentLink, type PartAlias } from '../api/client'
+import { partsApi, stockApi, documentsApi, locationsApi, containersApi, intakeApi, type Part, type StockItem, type PartDocumentLink, type PartAlias, type Location, type Container, type IntakeCandidate } from '../api/client'
 import { DOCUMENT_TYPES, PART_DOC_RELATIONSHIPS, formatBytes } from '../utils/documents'
 import { EnrichmentPanel } from '../components/EnrichmentPanel'
+
+const STOCK_DEFAULT = {
+  quantity: '',
+  unit: '',
+  supplier: '',
+  notes: '',
+  placementType: 'location' as 'location' | 'container',
+  location_id: '',
+  container_id: '',
+  status: 'available',
+}
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState<Partial<Part>>({})
+  const [form, setForm] = useState<Partial<Part> & { part_code?: string }>({})
   const [error, setError] = useState('')
   const [showDocUpload, setShowDocUpload] = useState(false)
   const [docFile, setDocFile] = useState<File | null>(null)
@@ -19,13 +30,24 @@ export function PartDetailPage() {
   const [newAlias, setNewAlias] = useState('')
   const [aliasError, setAliasError] = useState('')
 
+  // Part code suggestion state
+  const [suggestingCode, setSuggestingCode] = useState(false)
+  const [codeWarning, setCodeWarning] = useState<IntakeCandidate[] | null>(null)
+
+  // Stock management state
+  const [showAddStock, setShowAddStock] = useState(false)
+  const [stockForm, setStockForm] = useState(STOCK_DEFAULT)
+  const [stockError, setStockError] = useState('')
+  const [editingStockId, setEditingStockId] = useState<string | null>(null)
+  const [editStockForm, setEditStockForm] = useState<Partial<typeof STOCK_DEFAULT & { id: string }>>({})
+
   const { data: part, isLoading } = useQuery({
     queryKey: ['parts', id],
     queryFn: () => partsApi.get(id!),
     enabled: !!id,
   })
 
-  const { data: stockData } = useQuery({
+  const { data: stockData, refetch: refetchStock } = useQuery({
     queryKey: ['stock', 'part', id],
     queryFn: () => stockApi.list({ part_id: id!, limit: 50 }),
     enabled: !!id,
@@ -41,6 +63,18 @@ export function PartDetailPage() {
     queryKey: ['part-aliases', id],
     queryFn: () => partsApi.listAliases(id!),
     enabled: !!id,
+  })
+
+  const { data: locsData } = useQuery({
+    queryKey: ['locations', 'list'],
+    queryFn: () => locationsApi.list({ limit: 100 }),
+    staleTime: 60_000,
+  })
+
+  const { data: ctrsData } = useQuery({
+    queryKey: ['containers', 'list'],
+    queryFn: () => containersApi.list({ limit: 200 }),
+    staleTime: 60_000,
   })
 
   const addAliasMutation = useMutation({
@@ -121,11 +155,68 @@ export function PartDetailPage() {
     },
   })
 
+  // Stock mutations
+  const createStockMutation = useMutation({
+    mutationFn: (payload: Partial<StockItem>) => stockApi.create(payload),
+    onSuccess: () => {
+      refetchStock()
+      qc.invalidateQueries({ queryKey: ['stock'] })
+      setShowAddStock(false)
+      setStockForm(STOCK_DEFAULT)
+      setStockError('')
+    },
+    onError: (err: any) => {
+      setStockError(err?.response?.data?.detail ?? 'Failed to add stock')
+    },
+  })
+
+  const updateStockMutation = useMutation({
+    mutationFn: ({ sid, payload }: { sid: string; payload: Partial<StockItem> }) =>
+      stockApi.update(sid, payload),
+    onSuccess: () => {
+      refetchStock()
+      qc.invalidateQueries({ queryKey: ['stock'] })
+      setEditingStockId(null)
+      setStockError('')
+    },
+    onError: (err: any) => {
+      setStockError(err?.response?.data?.detail ?? 'Failed to update stock')
+    },
+  })
+
+  const deleteStockMutation = useMutation({
+    mutationFn: (sid: string) => stockApi.delete(sid),
+    onSuccess: () => {
+      refetchStock()
+      qc.invalidateQueries({ queryKey: ['stock'] })
+    },
+    onError: (err: any) => alert(err?.response?.data?.detail ?? 'Failed to delete stock item'),
+  })
+
+  const handleSuggestCode = async () => {
+    const desc = [form.name ?? part?.name, form.short_description].filter(Boolean).join(' ').trim()
+    if (!desc) return
+    setSuggestingCode(true)
+    setCodeWarning(null)
+    try {
+      const result = await intakeApi.match(desc)
+      setForm(f => ({ ...f, part_code: result.suggested_part_code }))
+      // Exclude the current part itself from warnings
+      const highConf = result.candidates.filter(c => c.confidence >= 50 && c.part_id !== id)
+      if (highConf.length > 0) setCodeWarning(highConf)
+    } catch {
+      // ignore — user can still type
+    } finally {
+      setSuggestingCode(false)
+    }
+  }
+
   if (isLoading) return <div className="loading">Loading…</div>
   if (!part) return <div className="empty">Part not found.</div>
 
   const handleEdit = () => {
     setForm({
+      part_code: part.part_code,
       name: part.name,
       short_description: part.short_description ?? '',
       manufacturer: part.manufacturer ?? '',
@@ -145,6 +236,59 @@ export function PartDetailPage() {
       if (v !== '') (payload as any)[k] = v
     }
     updateMutation.mutate(payload)
+  }
+
+  const handleAddStock = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!stockForm.quantity) { setStockError('Quantity is required.'); return }
+    const payload: Partial<StockItem> = {
+      part_id: id!,
+      quantity: parseFloat(stockForm.quantity),
+      status: stockForm.status,
+    }
+    if (stockForm.unit) payload.unit = stockForm.unit
+    if (stockForm.supplier) payload.supplier = stockForm.supplier
+    if (stockForm.notes) payload.notes = stockForm.notes
+    if (stockForm.placementType === 'location' && stockForm.location_id) {
+      payload.location_id = stockForm.location_id
+    } else if (stockForm.placementType === 'container' && stockForm.container_id) {
+      payload.container_id = stockForm.container_id
+    }
+    createStockMutation.mutate(payload)
+  }
+
+  const handleEditStockOpen = (item: StockItem) => {
+    setEditStockForm({
+      quantity: String(item.quantity),
+      unit: item.unit ?? '',
+      supplier: item.supplier ?? '',
+      notes: item.notes ?? '',
+      placementType: item.container_id ? 'container' : 'location',
+      location_id: item.location_id ?? '',
+      container_id: item.container_id ?? '',
+      status: item.status,
+    })
+    setEditingStockId(item.id)
+    setStockError('')
+  }
+
+  const handleEditStockSubmit = (e: React.FormEvent, sid: string) => {
+    e.preventDefault()
+    const payload: Partial<StockItem> = {
+      quantity: parseFloat(editStockForm.quantity ?? '0'),
+      status: editStockForm.status,
+    }
+    payload.unit = editStockForm.unit || null
+    payload.supplier = editStockForm.supplier || null
+    payload.notes = editStockForm.notes || null
+    if ((editStockForm.placementType as string) === 'location') {
+      payload.location_id = editStockForm.location_id || null
+      payload.container_id = null
+    } else {
+      payload.container_id = editStockForm.container_id || null
+      payload.location_id = null
+    }
+    updateStockMutation.mutate({ sid, payload })
   }
 
   return (
@@ -176,7 +320,45 @@ export function PartDetailPage() {
           <form onSubmit={handleUpdate}>
             <div className="form-group">
               <label className="form-label">Name</label>
-              <input className="form-control" value={form.name ?? ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <input className="form-control" value={form.name ?? ''} onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setCodeWarning(null) }} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Part Code</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  className="form-control"
+                  value={form.part_code ?? ''}
+                  onChange={e => { setForm(f => ({ ...f, part_code: e.target.value })); setCodeWarning(null) }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                  disabled={suggestingCode || !(form.name ?? part.name).trim()}
+                  onClick={handleSuggestCode}
+                  title="Generate a unique code from the name/description and check for similar existing parts"
+                >
+                  {suggestingCode ? '…' : 'Suggest'}
+                </button>
+              </div>
+              {codeWarning && codeWarning.length > 0 && (
+                <div style={{ marginTop: '0.5rem', padding: '0.6rem 0.75rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.8rem' }}>
+                  <strong style={{ color: '#92400e' }}>⚠ Similar parts already in your database</strong>
+                  <ul style={{ margin: '0.3rem 0 0.4rem 1rem', padding: 0, color: '#78350f' }}>
+                    {codeWarning.slice(0, 3).map(c => (
+                      <li key={c.part_id}>
+                        <strong>{c.part_code}</strong> — {c.name}
+                        {' '}<span style={{ color: '#b45309' }}>({c.confidence}% match)</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <span style={{ color: '#92400e' }}>
+                    These may be duplicates — you can still save, but consider checking the{' '}
+                    <a href="/intake" style={{ color: '#d97706', fontWeight: 600 }}>Intake page</a>
+                    {' '}first.
+                  </span>
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Short Description</label>
@@ -206,7 +388,7 @@ export function PartDetailPage() {
               <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? 'Saving…' : 'Save'}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => setEditing(false)}>Cancel</button>
+              <button type="button" className="btn btn-secondary" onClick={() => { setEditing(false); setCodeWarning(null) }}>Cancel</button>
             </div>
           </form>
         </div>
@@ -239,9 +421,17 @@ export function PartDetailPage() {
       )}
 
       {/* Stock items for this part */}
-      <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2rem', marginBottom: '1rem' }}>
-        Stock ({stockData?.total ?? 0} item{stockData?.total !== 1 ? 's' : ''})
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '2rem', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+          Stock ({stockData?.total ?? 0} item{stockData?.total !== 1 ? 's' : ''})
+        </h2>
+        <button className="btn btn-secondary btn-sm" onClick={() => { setStockError(''); setShowAddStock(true) }}>
+          + Add Stock
+        </button>
+      </div>
+
+      {stockError && <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>{stockError}</div>}
+
       {!stockData || stockData.items.length === 0 ? (
         <div className="empty" style={{ padding: '1.5rem' }}>No stock recorded for this part.</div>
       ) : (
@@ -254,30 +444,271 @@ export function PartDetailPage() {
                 <th>Status</th>
                 <th>Location / Container</th>
                 <th>Supplier</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {stockData.items.map((item: StockItem) => (
-                <tr key={item.id}>
-                  <td style={{ fontWeight: 500 }}>{item.quantity}</td>
-                  <td>{item.unit ?? part.default_unit}</td>
-                  <td><span className={`badge badge-${item.status}`}>{item.status}</span></td>
-                  <td>
-                    {item.container_name
-                      ? item.container_name
-                      : item.location_name
-                      ? item.location_name
-                      : item.container_id
-                      ? `ctr:${item.container_id.slice(0, 8)}…`
-                      : item.location_id
-                      ? `loc:${item.location_id.slice(0, 8)}…`
-                      : '—'}
-                  </td>
-                  <td>{item.supplier ?? '—'}</td>
-                </tr>
+                editingStockId === item.id ? (
+                  <tr key={item.id}>
+                    <td colSpan={6} style={{ padding: '0.75rem' }}>
+                      <form onSubmit={e => handleEditStockSubmit(e, item.id)} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end' }}>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Qty *</label>
+                          <input
+                            className="form-control"
+                            style={{ width: '80px' }}
+                            type="number"
+                            step="any"
+                            required
+                            value={editStockForm.quantity ?? ''}
+                            onChange={e => setEditStockForm(f => ({ ...f, quantity: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Unit</label>
+                          <input
+                            className="form-control"
+                            style={{ width: '70px' }}
+                            value={editStockForm.unit ?? ''}
+                            onChange={e => setEditStockForm(f => ({ ...f, unit: e.target.value }))}
+                            placeholder={part.default_unit}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Status</label>
+                          <select
+                            className="form-control"
+                            style={{ width: '110px' }}
+                            value={editStockForm.status ?? 'available'}
+                            onChange={e => setEditStockForm(f => ({ ...f, status: e.target.value }))}
+                          >
+                            <option value="available">Available</option>
+                            <option value="reserved">Reserved</option>
+                            <option value="used">Used</option>
+                            <option value="damaged">Damaged</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Placement</label>
+                          <select
+                            className="form-control"
+                            style={{ width: '110px' }}
+                            value={editStockForm.placementType ?? 'location'}
+                            onChange={e => setEditStockForm(f => ({ ...f, placementType: e.target.value as 'location' | 'container' }))}
+                          >
+                            <option value="location">Location</option>
+                            <option value="container">Container</option>
+                          </select>
+                        </div>
+                        {editStockForm.placementType === 'location' ? (
+                          <div>
+                            <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Location</label>
+                            <select
+                              className="form-control"
+                              style={{ width: '140px' }}
+                              value={editStockForm.location_id ?? ''}
+                              onChange={e => setEditStockForm(f => ({ ...f, location_id: e.target.value }))}
+                            >
+                              <option value="">— none —</option>
+                              {locsData?.items.map((l: Location) => (
+                                <option key={l.id} value={l.id}>{l.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <div>
+                            <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Container</label>
+                            <select
+                              className="form-control"
+                              style={{ width: '140px' }}
+                              value={editStockForm.container_id ?? ''}
+                              onChange={e => setEditStockForm(f => ({ ...f, container_id: e.target.value }))}
+                            >
+                              <option value="">— none —</option>
+                              {ctrsData?.items.map((c: Container) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Supplier</label>
+                          <input
+                            className="form-control"
+                            style={{ width: '120px' }}
+                            value={editStockForm.supplier ?? ''}
+                            onChange={e => setEditStockForm(f => ({ ...f, supplier: e.target.value }))}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button type="submit" className="btn btn-primary btn-sm" disabled={updateStockMutation.isPending}>
+                            {updateStockMutation.isPending ? '…' : 'Save'}
+                          </button>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingStockId(null)}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={item.id}>
+                    <td style={{ fontWeight: 500 }}>{item.quantity}</td>
+                    <td>{item.unit ?? part.default_unit}</td>
+                    <td><span className={`badge badge-${item.status}`}>{item.status}</span></td>
+                    <td>
+                      {item.container_name
+                        ? item.container_name
+                        : item.location_name
+                        ? item.location_name
+                        : item.container_id
+                        ? `ctr:${item.container_id.slice(0, 8)}…`
+                        : item.location_id
+                        ? `loc:${item.location_id.slice(0, 8)}…`
+                        : '—'}
+                    </td>
+                    <td>{item.supplier ?? '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginRight: '0.3rem' }}
+                        onClick={() => handleEditStockOpen(item)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => { if (confirm('Delete this stock item?')) deleteStockMutation.mutate(item.id) }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                )
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Add Stock modal */}
+      {showAddStock && (
+        <div className="modal-overlay" onClick={() => setShowAddStock(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Add Stock</div>
+            {stockError && <div className="alert alert-error">{stockError}</div>}
+            <form onSubmit={handleAddStock}>
+              <div className="form-group">
+                <label className="form-label">Quantity *</label>
+                <input
+                  className="form-control"
+                  type="number"
+                  step="any"
+                  required
+                  value={stockForm.quantity}
+                  onChange={e => setStockForm(f => ({ ...f, quantity: e.target.value }))}
+                  placeholder="e.g. 10"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Unit</label>
+                <input
+                  className="form-control"
+                  value={stockForm.unit}
+                  onChange={e => setStockForm(f => ({ ...f, unit: e.target.value }))}
+                  placeholder={part.default_unit}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-control"
+                  value={stockForm.status}
+                  onChange={e => setStockForm(f => ({ ...f, status: e.target.value }))}
+                >
+                  <option value="available">Available</option>
+                  <option value="reserved">Reserved</option>
+                  <option value="used">Used</option>
+                  <option value="damaged">Damaged</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Stored in</label>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                    <input
+                      type="radio"
+                      name="stockPlacement"
+                      value="location"
+                      checked={stockForm.placementType === 'location'}
+                      onChange={() => setStockForm(f => ({ ...f, placementType: 'location', container_id: '' }))}
+                    />
+                    Location
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                    <input
+                      type="radio"
+                      name="stockPlacement"
+                      value="container"
+                      checked={stockForm.placementType === 'container'}
+                      onChange={() => setStockForm(f => ({ ...f, placementType: 'container', location_id: '' }))}
+                    />
+                    Container
+                  </label>
+                </div>
+                {stockForm.placementType === 'location' ? (
+                  <select
+                    className="form-control"
+                    value={stockForm.location_id}
+                    onChange={e => setStockForm(f => ({ ...f, location_id: e.target.value }))}
+                  >
+                    <option value="">— no location —</option>
+                    {locsData?.items.map((l: Location) => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    className="form-control"
+                    value={stockForm.container_id}
+                    onChange={e => setStockForm(f => ({ ...f, container_id: e.target.value }))}
+                  >
+                    <option value="">— no container —</option>
+                    {ctrsData?.items.map((c: Container) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Supplier</label>
+                <input
+                  className="form-control"
+                  value={stockForm.supplier}
+                  onChange={e => setStockForm(f => ({ ...f, supplier: e.target.value }))}
+                  placeholder="e.g. Mouser, Farnell"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Notes</label>
+                <textarea
+                  className="form-control"
+                  rows={2}
+                  value={stockForm.notes}
+                  onChange={e => setStockForm(f => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={createStockMutation.isPending}>
+                  {createStockMutation.isPending ? 'Adding…' : 'Add Stock'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowAddStock(false); setStockError('') }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

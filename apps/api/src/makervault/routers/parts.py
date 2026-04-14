@@ -198,6 +198,16 @@ async def update_part(
             detail=f"Part {part_id} not found.",
         )
     updates = body.model_dump(exclude_unset=True)
+    # Check part_code uniqueness if it's being changed
+    if "part_code" in updates and updates["part_code"] != part.part_code:
+        existing = await db.execute(
+            select(Part).where(Part.part_code == updates["part_code"])
+        )
+        if existing.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A part with code '{updates['part_code']}' already exists.",
+            )
     # Strip PostgreSQL ARRAY fields on non-PostgreSQL backends (e.g. SQLite in tests).
     try:
         if db.sync_session.get_bind().dialect.name != "postgresql":

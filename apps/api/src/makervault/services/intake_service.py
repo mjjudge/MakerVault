@@ -201,6 +201,8 @@ def score_candidate(
 
     Scoring components (sum, capped at 100):
     - Jaccard overlap between description tokens and part-name tokens: 0–50
+      OR query-coverage score (fraction of query tokens found in part): 0–35
+      (whichever is higher — ensures short queries like "breadboard" match well)
     - Exact package match (package_hint in part tokens): +15
     - MPN substring match: +20
     - Alias token overlap bonus: +15
@@ -215,7 +217,18 @@ def score_candidate(
     all_part_tokens = name_tokens | alias_tokens
 
     jaccard = _jaccard(query_tokens, all_part_tokens)
-    base = int(jaccard * 50)
+    jaccard_score = int(jaccard * 50)
+
+    # Coverage score: how much of the query is covered by the part tokens?
+    # This rescues short queries (e.g. "breadboard") that score low on Jaccard
+    # because the part name has many unrelated tokens.
+    coverage = (
+        len(query_tokens & all_part_tokens) / len(query_tokens)
+        if query_tokens else 0.0
+    )
+    coverage_score = int(coverage * 35)
+
+    base = max(jaccard_score, coverage_score)
 
     # Package hint bonus
     package_bonus = 0
@@ -327,7 +340,7 @@ async def suggest_part_code(description: str, db: AsyncSession) -> str:
 # Candidate matching
 # ---------------------------------------------------------------------------
 
-_MIN_CONFIDENCE = 10  # Candidates below this score are excluded
+_MIN_CONFIDENCE = 8  # Candidates below this score are excluded
 
 
 async def find_candidates(

@@ -24,6 +24,7 @@ BACKUP_TYPE_ENUM = postgresql.ENUM(
     "documents",
     "full",
     name="backup_type_enum",
+    create_type=False,  # managed explicitly in upgrade/downgrade
 )
 
 BACKUP_STATUS_ENUM = postgresql.ENUM(
@@ -31,12 +32,23 @@ BACKUP_STATUS_ENUM = postgresql.ENUM(
     "success",
     "failed",
     name="backup_status_enum",
+    create_type=False,  # managed explicitly in upgrade/downgrade
 )
 
 
 def upgrade() -> None:
-    BACKUP_TYPE_ENUM.create(op.get_bind(), checkfirst=True)
-    BACKUP_STATUS_ENUM.create(op.get_bind(), checkfirst=True)
+    op.execute(sa.text("""
+        DO $$ BEGIN
+            CREATE TYPE backup_type_enum AS ENUM ('db', 'documents', 'full');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """))
+    op.execute(sa.text("""
+        DO $$ BEGIN
+            CREATE TYPE backup_status_enum AS ENUM ('running', 'success', 'failed');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """))
 
     op.create_table(
         "backup_records",

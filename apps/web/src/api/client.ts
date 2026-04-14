@@ -260,7 +260,7 @@ export const locationsApi = {
 }
 
 export const containersApi = {
-  list: (params?: { location_id?: string; skip?: number; limit?: number }) =>
+  list: (params?: { location_id?: string; parent_container_id?: string; skip?: number; limit?: number }) =>
     apiClient.get<PagedResponse<Container>>('/containers', { params }).then(r => r.data),
   get: (id: string) => apiClient.get<Container>(`/containers/${id}`).then(r => r.data),
   create: (data: Partial<Container>) => apiClient.post<Container>('/containers', data).then(r => r.data),
@@ -588,6 +588,9 @@ export const intakeApi = {
       .post<{ suggested_part_code: string }>('/intake/suggest-code', { description })
       .then(r => r.data),
 }
+
+export const usageHistoryApi = {
+  list: (params?: {
     stock_item_id?: string
     project_id?: string
     part_id?: string

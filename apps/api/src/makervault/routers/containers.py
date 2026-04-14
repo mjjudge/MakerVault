@@ -24,6 +24,7 @@ async def list_containers(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     location_id: uuid.UUID | None = Query(default=None),
+    parent_container_id: uuid.UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db_session),
 ) -> ContainerListResponse:
     query = select(Container)
@@ -31,6 +32,9 @@ async def list_containers(
     if location_id is not None:
         query = query.where(Container.location_id == location_id)
         count_query = count_query.where(Container.location_id == location_id)
+    if parent_container_id is not None:
+        query = query.where(Container.parent_container_id == parent_container_id)
+        count_query = count_query.where(Container.parent_container_id == parent_container_id)
 
     total = (await db.execute(count_query)).scalar_one()
     result = await db.execute(query.order_by(Container.name).offset(skip).limit(limit))

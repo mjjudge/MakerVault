@@ -43,6 +43,12 @@ export function ProjectsPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => projectsApi.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+    onError: (err: any) => alert(err?.response?.data?.detail ?? 'Failed to delete project'),
+  })
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setSearch(q)
@@ -101,6 +107,7 @@ export function ProjectsPage() {
                 <th>Description</th>
                 <th>Status</th>
                 <th>Created</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -119,6 +126,18 @@ export function ProjectsPage() {
                   </td>
                   <td style={{ fontSize: '0.85rem', color: '#6b7280' }}>
                     {new Date(project.created_at).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => {
+                        if (confirm(`Delete project "${project.name}"?`)) {
+                          deleteMutation.mutate(project.id)
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}

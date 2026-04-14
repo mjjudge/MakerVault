@@ -332,7 +332,7 @@ export function SuggestionsPage() {
         <textarea
           className="form-control"
           rows={2}
-          placeholder="e.g. "What can I build for a beginner?" or "I want to make something with Wi-Fi and sensors.""
+          placeholder={'e.g. "What can I build for a beginner?" or "I want to make something with Wi-Fi and sensors."'}
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
           style={{ flex: 1, resize: 'vertical', minHeight: '3rem' }}

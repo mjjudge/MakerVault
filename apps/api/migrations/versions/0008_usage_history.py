@@ -27,11 +27,19 @@ USAGE_ACTION_TYPE_ENUM = postgresql.ENUM(
     "tested",
     "damaged",
     name="usage_action_type_enum",
+    create_type=False,  # managed explicitly in upgrade/downgrade
 )
 
 
 def upgrade() -> None:
-    USAGE_ACTION_TYPE_ENUM.create(op.get_bind(), checkfirst=True)
+    op.execute(sa.text("""
+        DO $$ BEGIN
+            CREATE TYPE usage_action_type_enum AS ENUM (
+                'allocated', 'used', 'returned', 'consumed', 'tested', 'damaged'
+            );
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """))
 
     op.create_table(
         "usage_history",

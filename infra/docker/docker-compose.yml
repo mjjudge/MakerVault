@@ -57,9 +57,11 @@ services:
       BACKUP_PATH: ${BACKUP_PATH:-/data/makervault/backups}
       BACKUP_RETENTION_COUNT: ${BACKUP_RETENTION_COUNT:-10}
       SECRET_KEY: ${SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - documents:/data/makervault/documents
-      - backups:/data/makervault/backups
+      - /mnt/ssd/makervault-backups:/data/makervault/backups
     depends_on:
       db:
         condition: service_healthy
@@ -89,7 +91,7 @@ services:
       BACKUP_PATH: ${BACKUP_PATH:-/data/makervault/backups}
     volumes:
       - documents:/data/makervault/documents
-      - backups:/data/makervault/backups
+      - /mnt/ssd/makervault-backups:/data/makervault/backups
     depends_on:
       db:
         condition: service_healthy
@@ -146,8 +148,6 @@ volumes:
   db_data:
     driver: local
   documents:
-    driver: local
-  backups:
     driver: local
     # To use a separate physical disk, replace the named volume above with a
     # bind mount in the api and worker service definitions, e.g.:
