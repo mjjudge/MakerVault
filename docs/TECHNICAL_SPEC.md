@@ -139,6 +139,7 @@ See [`ROADMAP.md`](ROADMAP.md) for the full phased plan. Summary:
 - **Phase 3:** AI provider abstraction layer
 - **Phase 4:** AI-assisted workflows
 - **Phase 5:** Polish, imports, mobile workflows
+- **Phase 6:** Assisted intake, inventory hygiene, backup resilience
 
 Implementation should not jump ahead. Each phase should be functional and stable before the next begins.
 

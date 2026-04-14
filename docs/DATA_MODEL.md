@@ -38,6 +38,10 @@ Category ──< Part ──< StockItem >──┬── Container ──> Locat
                                         └──< UsageHistory
 
 AIProviderConfig ──< EnrichmentJob
+
+IntakeSuggestion >──(optional)── Part
+
+BackupRecord
 ```
 
 ---
@@ -394,6 +398,47 @@ Tracks background AI and parsing jobs. Records input, output, and status for tra
 
 ---
 
+### IntakeSuggestion *(Epic 14)*
+
+Records the result of an assisted part intake request — the candidates surfaced and the suggested new part code. Stored so that the user's decision (reuse or create) can be reviewed and audited.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `input_text` | text | The raw free-text description the user entered |
+| `normalised_text` | text | Normalised/cleaned version of the input |
+| `suggested_part_code` | text | The part code generated for a potential new part |
+| `candidate_part_ids` | UUID[] | Ordered list of existing Part IDs ranked as possible matches |
+| `candidate_scores` | jsonb | Confidence scores keyed by Part ID |
+| `suggested_placement` | jsonb | Suggested location/container based on prior patterns (nullable) |
+| `decision` | enum | `new_part`, `reuse_existing`, `dismissed`; set when the user acts on the suggestion |
+| `resolved_part_id` | UUID | Foreign key → Part (nullable; set when decision is `reuse_existing`) |
+| `created_at` | timestamptz | When the intake request was made |
+| `resolved_at` | timestamptz | When the user made their decision (nullable) |
+
+---
+
+### BackupRecord *(Epic 16)*
+
+Records metadata about each backup event (manual or scheduled). Provides the "last backed up" visibility without the backup tool needing to write to the primary database.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `backup_type` | enum | `full`, `database_only`, `documents_only` |
+| `triggered_by` | enum | `manual`, `scheduled`, `api` |
+| `status` | enum | `running`, `completed`, `failed` |
+| `started_at` | timestamptz | When the backup started |
+| `completed_at` | timestamptz | When it finished (nullable) |
+| `db_snapshot_path` | text | Path or reference to the database snapshot file (nullable) |
+| `documents_snapshot_path` | text | Path or reference to the documents archive file (nullable) |
+| `size_bytes` | bigint | Total size of the backup output (nullable) |
+| `error_message` | text | Human-readable error detail if status is `failed` (nullable) |
+| `notes` | text | Optional operator notes |
+| `created_at` | timestamptz | Record creation timestamp |
+
+---
+
 ## Relationships overview
 
 ```
@@ -412,6 +457,7 @@ StockItem    1──N  UsageHistory
 Project      1──N  UsageHistory
 Project      N──N  Document            (via ProjectDocument)
 AIProviderConfig  1──N  EnrichmentJob
+IntakeSuggestion  0──1  Part           (optional resolved_part_id)
 ```
 
 ---
@@ -481,6 +527,13 @@ Add when workflows and search mature:
 - PartAlias
 - Capability
 
+### Phase 6 additions *(Epics 14–16)*
+
+Add when implementing assisted intake, hygiene, and backup:
+
+- IntakeSuggestion
+- BackupRecord
+
 ---
 
 ---
@@ -512,3 +565,5 @@ Quantity and unit handling must support both countable items (pcs) and measured 
 | Project | `idea`, `planned`, `active`, `paused`, `completed`, `abandoned` |
 | Document source type | `uploaded`, `captured_from_web`, `manual_note`, `generated_summary` |
 | EnrichmentJob | `queued`, `running`, `completed`, `failed`, `cancelled` |
+| IntakeSuggestion decision | `new_part`, `reuse_existing`, `dismissed` |
+| BackupRecord | `running`, `completed`, `failed` |

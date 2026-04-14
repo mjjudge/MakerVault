@@ -238,3 +238,81 @@ false positives.
   layered on later (see Phase 5 semantic search)
 - Results are advisory only — no automatic merging is performed
 
+
+---
+
+## ADR-012 — Assisted intake as a suggestion layer, not an automatic creator
+
+**Status:** Accepted
+
+**Context:**
+Epic 14 introduces a free-text intake path where users describe a part in plain
+English and the system suggests matches or generates a new part code. Two models
+were considered: (a) automatically create the part record from the description,
+or (b) surface suggestions and require the user to confirm before any record is
+created.
+
+**Decision:**
+Intake is a suggestion layer only. The user's description triggers a candidate
+search and code generation, but no Part or StockItem record is created until the
+user explicitly chooses an action ("reuse this part" or "create new"). The
+`IntakeSuggestion` record is stored for audit purposes but is not authoritative.
+
+**Consequences:**
+- Consistent with ADR-005 (database as source of truth; AI does not act without
+  confirmation)
+- Intake results are reviewable and dismissible
+- The suggestion can be revisited if the user does not immediately decide
+- Prevents ghost records from speculative intake attempts
+
+---
+
+## ADR-013 — Inventory hygiene surfaced as advisory, not automatic remediation
+
+**Status:** Accepted
+
+**Context:**
+Epic 15 introduces hygiene checks — duplicate detection, split-stock visibility,
+weak-metadata flags, and a part merge workflow. The question is whether hygiene
+issues should trigger automatic fixes (e.g. auto-merge high-confidence
+duplicates) or only surface them for human review.
+
+**Decision:**
+All hygiene insights are advisory. The system surfaces issues but never
+automatically merges, deletes, or modifies records. The part merge endpoint
+requires an explicit request with a confirmed source part ID. The `needs_review`
+flag is set by automated processes but cleared only by a user action.
+
+**Consequences:**
+- Users retain full control over their inventory data
+- No risk of silent data loss from an over-confident merge
+- Merge operations are auditable (the absorbing part records the event)
+- The hygiene dashboard may show stale counts until the user acts; this is
+  acceptable for a single-operator system
+
+---
+
+## ADR-014 — Backup records stored in the primary database
+
+**Status:** Accepted
+
+**Context:**
+Epic 16 introduces `BackupRecord` to give users visibility over backup history.
+Two approaches were considered: (a) store backup metadata in the primary
+PostgreSQL database, or (b) write it to a separate sidecar file on the host.
+
+**Decision:**
+Backup records are stored in the PostgreSQL `backup_records` table. Backup
+scripts (manual or scheduled) call `POST /api/backups` to register a completed
+run. The API and UI surface the most recent records without any external tooling.
+
+**Consequences:**
+- Backup status is visible in the same UI as the rest of the system
+- A backup script can fail to register (e.g. if the DB is unavailable); this
+  is an acceptable edge case — a failed backup should be visible as missing
+  rather than silently omitted
+- The backup records themselves are included in the next database backup, so
+  history accumulates correctly over time
+- If the database itself is unrecoverable, backup history is also lost; this is
+  acceptable because the restore instructions and volume snapshots are the
+  authoritative recovery mechanism, not the records table
