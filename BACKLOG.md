@@ -674,6 +674,150 @@ Reduce friction for real-world usage and maintenance.
 
 ---
 
+EPIC 14 — Assisted part intake, matching, and code generation
+
+Goal
+
+Make adding new parts fast, consistent, and resistant to duplicates.
+
+Scope
+	•	free-text intake
+	•	code suggestion
+	•	duplicate/similarity detection
+	•	“add stock to existing part” workflow
+	•	storage suggestion based on past patterns
+
+Key capabilities
+	•	User enters a description like:
+	•	“10k resistor 0603”
+	•	“ESP32 dev board”
+	•	“DHT22 temp sensor”
+	•	System suggests:
+	•	likely existing matching parts
+	•	a new human-readable part code if needed
+	•	category / tags / aliases
+	•	likely default storage location/container
+
+Tasks
+	•	Add part intake workflow in UI
+	•	Add normalisation rules for descriptions
+	•	Add candidate match service
+	•	Add code generation service
+	•	Add confidence scoring
+	•	Add merge/reuse prompt
+	•	Add optional “create new anyway” path
+	•	Add default placement suggestion based on historical stock placement for similar parts
+
+Acceptance criteria
+	•	A user can enter a natural description instead of inventing everything manually
+	•	MakerVault suggests possible existing parts before creating a new one
+	•	MakerVault can suggest a new unique part code
+	•	A user can choose to reuse an existing Part and add stock to it
+	•	Suggested storage locations are offered when there is a strong prior pattern
+
+Tests
+	•	normalisation tests
+	•	duplicate candidate ranking tests
+	•	code generation uniqueness tests
+	•	“reuse existing part” workflow tests
+	•	false-positive guard tests
+
+⸻
+
+EPIC 15 — Inventory hygiene, consolidation, and review workflows
+
+Goal
+
+Help keep the inventory clean, consistent, and easy to manage over time.
+
+Scope
+	•	duplicate review queue
+	•	split-stock visibility
+	•	consolidation suggestions
+	•	data quality dashboards
+
+Key capabilities
+	•	show parts stored in multiple locations
+	•	show possible duplicates
+	•	suggest consolidation opportunities
+	•	flag ambiguous records needing review
+	•	flag parts with weak metadata
+
+Tasks
+	•	Add “possible duplicates” review page
+	•	Add “part stored in multiple places” insight
+	•	Add consolidation suggestion logic
+	•	Add “needs review” queue
+	•	Add admin/maintenance dashboard cards:
+	•	no documents
+	•	no aliases
+	•	no capabilities
+	•	duplicate candidates
+	•	split stock
+	•	missing placement
+	•	Add merge workflow for duplicate parts
+
+Acceptance criteria
+	•	A user can review and resolve potential duplicates
+	•	MakerVault can highlight parts split across multiple locations
+	•	MakerVault can suggest a preferred storage location/container
+	•	A user can merge duplicate parts safely
+	•	Inventory hygiene issues are visible without using the API directly
+
+Tests
+	•	duplicate grouping tests
+	•	merge workflow tests
+	•	split-stock detection tests
+	•	consolidation suggestion tests
+	•	regression tests for safe part merge behaviour
+
+⸻
+
+EPIC 16 — Backup, restore metadata, and operational resilience
+
+Goal
+
+Make backup and restore visible, trustworthy, and easy to manage.
+
+Scope
+	•	backup records
+	•	“last backed up” visibility
+	•	scheduled backup support
+	•	restore guidance
+	•	backup health surfacing
+
+Key capabilities
+	•	show last successful full backup
+	•	show last DB backup
+	•	show last documents backup
+	•	record backup failures
+	•	optionally trigger backup from UI/API
+	•	export restore instructions
+
+Tasks
+	•	Add BackupRecord model and endpoints
+	•	Add backup status page/widget
+	•	Add backup execution hooks or wrapper scripts
+	•	Record metadata for manual and scheduled backups
+	•	Add “last backup” display in admin/settings
+	•	Add restore documentation and validation steps
+	•	Add optional scheduled backup job
+	•	Add optional off-device copy target config later
+
+Acceptance criteria
+	•	A user can see when the system was last successfully backed up
+	•	Backup runs create visible metadata records
+	•	Backup failures are visible
+	•	Restore instructions are documented and testable
+	•	Full backup includes both DB and document store
+
+Tests
+	•	backup metadata creation tests
+	•	scheduled backup tests
+	•	failure recording tests
+	•	restore validation smoke tests
+	•	UI/API tests for backup status visibility
+
 ## Not now
 
 Deliberately not in the early roadmap:
