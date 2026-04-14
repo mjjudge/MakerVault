@@ -267,6 +267,8 @@ docker compose start
 Store backups off-device. A weekly automated snapshot plus the CSV export after
 significant changes is a practical strategy for a single-user system.
 
+---
+
 ### 19. Monitor backup status
 
 Go to **Admin → Backup Status** to see when MakerVault was last successfully
