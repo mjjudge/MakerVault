@@ -8,6 +8,7 @@ Add new model modules to the __all__ list as they are created.
 """
 
 from makervault.models.ai_provider_config import AIProviderConfig
+from makervault.models.backup_record import BackupRecord
 from makervault.models.category import Category
 from makervault.models.container import Container
 from makervault.models.document import Document
@@ -24,6 +25,7 @@ from makervault.models.usage_history import UsageHistory
 
 __all__ = [
     "AIProviderConfig",
+    "BackupRecord",
     "Category",
     "Container",
     "Document",

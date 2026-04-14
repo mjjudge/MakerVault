@@ -63,6 +63,11 @@ logs/
 apps/api/media/
 apps/api/documents/
 
+# Backup archives (potentially large; always stored outside the repo)
+backups/
+*.backup
+*.dump
+
 # Temporary and generated files
 *.tmp
 *.bak
