@@ -20,38 +20,244 @@ if TYPE_CHECKING:
     pass
 
 # ---------------------------------------------------------------------------
-# Lookup tables used for normalisation and code-prefix generation
+# Known family lookup — substring match on lowercased description.
+# Checked in order; first match wins.
+# Format: (search_string, category, subcategory, family)
 # ---------------------------------------------------------------------------
 
-# Maps description keywords → part-type prefix (for code generation)
-_KIND_PREFIXES: list[tuple[set[str], str]] = [
-    ({"resistor", "res", "resistance"}, "RES"),
-    ({"capacitor", "cap", "capacitance"}, "CAP"),
-    ({"inductor", "ind", "inductance", "coil", "choke"}, "IND"),
-    ({"diode"}, "DIODE"),
-    ({"led", "light emitting"}, "LED"),
-    ({"transistor", "bjt", "mosfet", "fet", "jfet"}, "TRANS"),
-    ({"microcontroller", "mcu", "microprocessor", "cpu"}, "MCU"),
-    ({"esp32", "esp8266", "esp"}, "MCU"),
-    ({"arduino"}, "MCU"),
-    ({"raspberry"}, "MCU"),
-    ({"ic", "integrated circuit", "chip", "opamp", "op-amp", "amplifier", "amp"}, "IC"),
-    ({"sensor", "dht", "bme", "bmp", "ds18"}, "SENSOR"),
-    ({"relay"}, "RELAY"),
-    ({"crystal", "oscillator", "xtal"}, "XTAL"),
-    ({"connector", "header", "socket", "plug", "jack"}, "CONN"),
-    ({"switch", "button", "pushbutton", "pb"}, "SW"),
-    ({"display", "lcd", "oled", "screen", "tft"}, "DISP"),
-    ({"motor", "servo", "stepper"}, "MOTOR"),
-    ({"module", "board", "dev board", "breakout"}, "MOD"),
-    ({"cable", "wire", "ribbon"}, "CABLE"),
-    ({"battery", "cell", "lipo", "nimh"}, "BAT"),
-    ({"fuse"}, "FUSE"),
-    ({"transformer", "xfmr"}, "XFMR"),
-    ({"regulator", "ldo", "vreg"}, "REG"),
-    ({"power supply", "psu"}, "PSU"),
-    ({"pcb", "printed circuit"}, "PCB"),
-    ({"tool"}, "TOOL"),
+_KNOWN_FAMILIES: list[tuple[str, str, str, str]] = [
+    # MCU / dev boards — check specific families before generic keywords
+    ("raspberry pi pico", "MCU", "DEV", "RPIPICO"),
+    ("rp2040", "MCU", "DEV", "RP2040"),
+    ("esp32-s3", "MCU", "DEV", "ESP32S3"),
+    ("esp32-s2", "MCU", "DEV", "ESP32S2"),
+    ("esp32-c3", "MCU", "DEV", "ESP32C3"),
+    ("esp32", "MCU", "DEV", "ESP32"),
+    ("esp8266", "MCU", "DEV", "ESP8266"),
+    ("esp-12", "MCU", "DEV", "ESP8266"),
+    ("stm32", "MCU", "DEV", "STM32"),
+    ("arduino", "MCU", "DEV", "ARDUINO"),
+    ("teensy", "MCU", "DEV", "TEENSY"),
+    ("attiny", "MCU", "DEV", "ATTINY"),
+    ("atmega", "MCU", "DEV", "ATMEGA"),
+    ("samd21", "MCU", "DEV", "SAMD21"),
+    ("bluepill", "MCU", "DEV", "STM32"),
+    # Sensors — IMU
+    ("mpu-6050", "SEN", "IMU", "MPU6050"),
+    ("mpu6050", "SEN", "IMU", "MPU6050"),
+    ("mpu 6050", "SEN", "IMU", "MPU6050"),
+    ("gy-521", "SEN", "IMU", "MPU6050"),
+    ("gy521", "SEN", "IMU", "MPU6050"),
+    ("icm-20948", "SEN", "IMU", "ICM20948"),
+    ("bno055", "SEN", "IMU", "BNO055"),
+    ("lsm6ds", "SEN", "IMU", "LSM6DS"),
+    ("adxl345", "SEN", "IMU", "ADXL345"),
+    # Sensors — environment
+    ("bme680", "SEN", "ENV", "BME680"),
+    ("bme280", "SEN", "ENV", "BME280"),
+    ("dht22", "SEN", "ENV", "DHT22"),
+    ("dht11", "SEN", "ENV", "DHT11"),
+    ("aht20", "SEN", "ENV", "AHT20"),
+    ("sht31", "SEN", "ENV", "SHT31"),
+    ("htu21", "SEN", "ENV", "HTU21"),
+    ("sht30", "SEN", "ENV", "SHT30"),
+    # Sensors — pressure
+    ("bmp280", "SEN", "PRS", "BMP280"),
+    ("bmp180", "SEN", "PRS", "BMP180"),
+    ("bmp085", "SEN", "PRS", "BMP085"),
+    # Sensors — temperature
+    ("ds18b20", "SEN", "TMP", "DS18B20"),
+    ("max6675", "SEN", "TMP", "MAX6675"),
+    # Sensors — distance
+    ("hc-sr04", "SEN", "DIS", "HCSR04"),
+    ("hcsr04", "SEN", "DIS", "HCSR04"),
+    ("vl53l1", "SEN", "DIS", "VL53L1"),
+    ("vl53l0", "SEN", "DIS", "VL53L0"),
+    ("tf-luna", "SEN", "DIS", "TFLUNA"),
+    # Sensors — motion / PIR
+    ("hc-sr501", "SEN", "MOT", "HCSR501"),
+    ("hcsr501", "SEN", "MOT", "HCSR501"),
+    # Sensors — gas / air quality
+    ("mq-135", "SEN", "GAS", "MQ135"),
+    ("mq135", "SEN", "GAS", "MQ135"),
+    ("mq-2", "SEN", "GAS", "MQ2"),
+    ("mq2", "SEN", "GAS", "MQ2"),
+    ("mq-7", "SEN", "GAS", "MQ7"),
+    ("mq7", "SEN", "GAS", "MQ7"),
+    ("ccs811", "SEN", "GAS", "CCS811"),
+    ("sgp30", "SEN", "GAS", "SGP30"),
+    # Sensors — light
+    ("bh1750", "SEN", "LUX", "BH1750"),
+    ("tsl2591", "SEN", "LUX", "TSL2591"),
+    ("veml6070", "SEN", "LUX", "VEML6070"),
+    # Sensors — biometric
+    ("max30102", "SEN", "BIO", "MAX30102"),
+    ("max30100", "SEN", "BIO", "MAX30100"),
+    # Sensors — weight
+    ("hx711", "SEN", "WGT", "HX711"),
+    # Power
+    ("tp4056", "PWR", "CHG", "TP4056"),
+    ("tp5100", "PWR", "CHG", "TP5100"),
+    ("ams1117", "PWR", "REG", "AMS1117"),
+    ("lm7805", "PWR", "REG", "LM7805"),
+    ("lm317", "PWR", "REG", "LM317"),
+    ("xl4016", "PWR", "CNV", "XL4016"),
+    ("mp1584", "PWR", "CNV", "MP1584"),
+    ("mt3608", "PWR", "CNV", "MT3608"),
+    ("xl6009", "PWR", "CNV", "XL6009"),
+    ("ina219", "PWR", "MON", "INA219"),
+    ("ina3221", "PWR", "MON", "INA3221"),
+    # Communications
+    ("nrf24l01", "COM", "RF", "NRF24L01"),
+    ("nrf24", "COM", "RF", "NRF24L01"),
+    ("max485", "COM", "RS4", "MAX485"),
+    ("hc-05", "COM", "BLE", "HC05"),
+    ("hc-06", "COM", "BLE", "HC06"),
+    ("hc05", "COM", "BLE", "HC05"),
+    ("hc06", "COM", "BLE", "HC06"),
+    ("sim800", "COM", "GSM", "SIM800"),
+    ("sim900", "COM", "GSM", "SIM900"),
+    ("ra-02", "COM", "LOR", "RA02"),
+    ("sx1276", "COM", "LOR", "SX1276"),
+    ("mfrc522", "COM", "NFC", "MFRC522"),
+    ("pn532", "COM", "NFC", "PN532"),
+    ("w5500", "COM", "ETH", "W5500"),
+    ("enc28j60", "COM", "ETH", "ENC28J60"),
+    # Drivers
+    ("l298n", "DRV", "MOT", "L298N"),
+    ("l293d", "DRV", "MOT", "L293D"),
+    ("a4988", "DRV", "MOT", "A4988"),
+    ("drv8825", "DRV", "MOT", "DRV8825"),
+    ("tb6600", "DRV", "MOT", "TB6600"),
+    ("drv8833", "DRV", "MOT", "DRV8833"),
+    # Display
+    ("ssd1306", "DIS", "OLE", "SSD1306"),
+    ("sh1106", "DIS", "OLE", "SH1106"),
+    ("ili9341", "DIS", "LCD", "ILI9341"),
+    ("st7789", "DIS", "LCD", "ST7789"),
+    ("st7735", "DIS", "LCD", "ST7735"),
+    ("max7219", "DIS", "SEG", "MAX7219"),
+    ("tm1637", "DIS", "SEG", "TM1637"),
+    # Connectors — specific breakout boards (check before generic USB keywords)
+    ("micro usb breakout", "CON", "USB", "USBMICRO"),
+    ("microusb breakout", "CON", "USB", "USBMICRO"),
+    ("usb-c breakout", "CON", "USB", "USBC"),
+    ("usb c breakout", "CON", "USB", "USBC"),
+    ("mini usb breakout", "CON", "USB", "USBMINI"),
+]
+
+# ---------------------------------------------------------------------------
+# Keyword classification rules
+# Format: (positive_keywords, negative_keywords, category, subcategory)
+# Checked in order; first rule where all positive keywords match and no
+# negative keyword matches wins.
+# ---------------------------------------------------------------------------
+
+# MCU family tokens — at least one must appear for "board"/"module" to become MCU
+_MCU_FAMILY_TOKENS: frozenset[str] = frozenset({
+    "esp32", "esp8266", "esp-12", "esp12", "esp-32", "esp-8266",
+    "stm32", "rp2040", "raspberry pi pico",
+    "arduino", "teensy", "attiny", "atmega",
+    "samd21", "samd51", "nrf52", "bluepill",
+})
+
+_KEYWORD_RULES: list[tuple[set[str], set[str], str, str]] = [
+    # MCU — explicit MCU vocabulary (no family lookup needed)
+    ({"microcontroller", "mcu", "microprocessor"}, set(), "MCU", "DEV"),
+    ({"dev board", "devkit", "development board", "dev kit"}, set(), "MCU", "DEV"),
+    # Sensors — specific subtypes first, generic "sensor" last
+    ({"accelerometer", "gyroscope", "imu", "gyro", "inertial measurement"}, set(), "SEN", "IMU"),
+    ({"thermocouple", "thermistor"}, set(), "SEN", "TMP"),
+    ({"temperature", "humidity"}, set(), "SEN", "ENV"),
+    ({"barometric", "barometer", "altimeter"}, set(), "SEN", "PRS"),
+    ({"ultrasonic", "distance sensor", "ranging sensor", "time-of-flight", "tof sensor", "lidar"}, set(), "SEN", "DIS"),
+    ({"pir", "passive infrared", "motion sensor", "mmwave", "radar module"}, set(), "SEN", "MOT"),
+    ({"gas sensor", "smoke sensor", "air quality", "co2 sensor", "voc sensor"}, set(), "SEN", "GAS"),
+    ({"light sensor", "ldr", "photodiode", "colour sensor", "color sensor", "uv sensor", "ambient light"}, set(), "SEN", "LUX"),
+    ({"microphone module", "sound sensor", "audio sensor"}, set(), "SEN", "SND"),
+    ({"hall effect", "reed switch", "magnetic sensor", "position sensor"}, set(), "SEN", "POS"),
+    ({"load cell", "weight sensor", "strain gauge"}, set(), "SEN", "WGT"),
+    ({"touch sensor", "capacitive sensor"}, set(), "SEN", "TCH"),
+    ({"gps module", "gnss module", "gps receiver"}, set(), "SEN", "GPS"),
+    ({"camera module", "ov2640", "ov7670"}, set(), "SEN", "CAM"),
+    ({"rtc module", "real time clock", "real-time clock"}, set(), "SEN", "RTC"),
+    ({"sensor"}, set(), "SEN", "GEN"),
+    # Communications
+    ({"wifi module", "wi-fi module", "wireless module"}, set(), "COM", "WIF"),
+    ({"bluetooth module", "ble module"}, set(), "COM", "BLE"),
+    ({"zigbee"}, set(), "COM", "ZIG"),
+    ({"lora module", "lorawan"}, set(), "COM", "LOR"),
+    ({"gsm module", "gprs module", "4g module", "cellular module"}, set(), "COM", "GSM"),
+    ({"nfc module", "rfid module", "rfid reader"}, set(), "COM", "NFC"),
+    ({"can bus", "canbus"}, set(), "COM", "CAN"),
+    ({"rs-485 module", "rs485 module", "modbus module"}, set(), "COM", "RS4"),
+    ({"ethernet module"}, set(), "COM", "ETH"),
+    # Power — chargers before generic "battery" rules
+    ({"lipo charger", "battery charger", "usb charger", "charging module"}, set(), "PWR", "CHG"),
+    ({"buck converter", "boost converter", "step-down converter", "step down converter",
+      "step-up converter", "step up converter", "dc-dc converter"}, set(), "PWR", "CNV"),
+    ({"voltage regulator", "ldo regulator", "linear regulator"}, set(), "PWR", "REG"),
+    ({"current sensor", "power monitor", "voltage monitor", "energy monitor"}, set(), "PWR", "MON"),
+    ({"ups module", "uninterruptible power"}, set(), "PWR", "UPS"),
+    ({"battery holder", "battery pack", "lipo battery", "lithium battery", "battery shield"}, set(), "PWR", "BAT"),
+    ({"power supply module", "psu module"}, set(), "PWR", "PSU"),
+    # Actuators
+    ({"relay module", "relay board"}, set(), "ACT", "REL"),
+    ({"servo motor", "servo module"}, set(), "ACT", "SRV"),
+    ({"stepper motor", "dc motor", "brushless motor"}, set(), "ACT", "MOT"),
+    ({"solenoid"}, set(), "ACT", "SOL"),
+    ({"buzzer module", "piezo buzzer"}, set(), "ACT", "BUZ"),
+    # Drivers
+    ({"motor driver", "motor controller", "h-bridge"}, set(), "DRV", "MOT"),
+    ({"led driver", "ws2812", "ws2811", "neopixel", "rgb driver"}, set(), "DRV", "LED"),
+    # Display
+    ({"oled display", "oled module", "oled screen"}, set(), "DIS", "OLE"),
+    ({"lcd display", "lcd module", "tft display", "tft screen", "tft module"}, set(), "DIS", "LCD"),
+    ({"e-paper", "epaper", "e-ink", "eink"}, set(), "DIS", "EPD"),
+    ({"7-segment", "seven segment", "digit display", "7 segment"}, set(), "DIS", "SEG"),
+    ({"display module", "display board", "display screen"}, set(), "DIS", "GEN"),
+    # Connectors / Interface — USB variants before generic breakout
+    ({"micro usb", "micro-usb", "microusb"}, set(), "CON", "USB"),
+    ({"mini usb", "mini-usb", "miniusb"}, set(), "CON", "USB"),
+    ({"usb-c connector", "usb-c breakout", "usb c breakout",
+      "type-c breakout", "type c breakout"}, set(), "CON", "USB"),
+    ({"usb connector", "usb socket", "usb breakout", "usb adapter board",
+      "usb female", "usb port"}, set(), "CON", "USB"),
+    ({"level shifter", "level converter", "logic level converter"}, set(), "CON", "LVL"),
+    ({"i2c hub", "i2c multiplexer", "i2c expander"}, set(), "CON", "I2C"),
+    ({"breakout board", "breakout module", "pin breakout", "adapter board"}, set(), "CON", "BRK"),
+    # Passive — discrete components
+    ({"resistor", "resistance"}, set(), "PAS", "RES"),
+    ({"capacitor", "capacitance"}, set(), "PAS", "CAP"),
+    ({"inductor", "inductance", "choke", "ferrite bead"}, set(), "PAS", "IND"),
+    ({"crystal oscillator", "xtal", "crystal resonator"}, set(), "PAS", "XTL"),
+    ({"potentiometer", "trimpot", "trim pot", "variable resistor"}, set(), "PAS", "TRM"),
+    ({"diode", "schottky diode", "zener diode"}, set(), "PAS", "DIO"),
+    ({"transistor", "mosfet", "bjt", "jfet"}, set(), "PAS", "TRS"),
+    ({"led", "light emitting diode"}, set(), "DIS", "LED"),
+    # Switches / Input
+    ({"joystick"}, set(), "SWI", "JOY"),
+    ({"keypad", "matrix keyboard"}, set(), "SWI", "KEY"),
+    ({"dip switch"}, set(), "SWI", "DIP"),
+    ({"toggle switch"}, set(), "SWI", "TOG"),
+    ({"pushbutton", "push button", "tactile switch", "momentary switch"}, set(), "SWI", "BTN"),
+    ({"rotary encoder"}, set(), "SWI", "ENC"),
+    # Mechanical
+    ({"enclosure", "project box", "project case"}, set(), "MEC", "BOX"),
+    ({"heatsink", "heat sink"}, set(), "MEC", "HSK"),
+    ({"standoff", "pcb spacer", "pcb mount"}, set(), "MEC", "MNT"),
+    # Cables
+    ({"usb cable"}, set(), "CAB", "USB"),
+    ({"jumper wire", "dupont wire"}, set(), "CAB", "JMP"),
+    ({"jst cable"}, set(), "CAB", "JST"),
+    ({"ribbon cable"}, set(), "CAB", "RIB"),
+    ({"cable", "wire"}, set(), "CAB", "GEN"),
+    # Tools
+    ({"programmer", "usbasp", "st-link", "j-link", "jtag", "swd adapter"}, set(), "TOO", "PRG"),
+    ({"logic analyzer", "oscilloscope"}, set(), "TOO", "TST"),
+    ({"tool"}, set(), "TOO", "GEN"),
+    # Generic module/board — lowest priority, only when nothing else matched
+    ({"module", "board"}, set(), "MOD", "GEN"),
 ]
 
 # Common stop words to strip from tokens
@@ -99,6 +305,59 @@ _VALUE_RE = re.compile(
 
 
 # ---------------------------------------------------------------------------
+# Internal classification helper
+# ---------------------------------------------------------------------------
+
+
+def _kw_matches(kw: str, lower: str, token_set: set[str]) -> bool:
+    """Return True if *kw* matches *lower*.
+
+    Multi-word keywords (containing a space) use substring matching — a space
+    can't hide inside another token so false positives are impossible.
+    Single-word keywords use token-set membership so that e.g. "mcu" does NOT
+    match "cjmcu", "imu" does not match "simulator", etc.
+    """
+    if " " in kw:
+        return kw in lower
+    return kw in token_set
+
+
+def _classify(lower: str, token_set: set[str]) -> tuple[str | None, str | None, str | None]:
+    """Classify a lowercased description → (category, subcategory, family).
+
+    Priority:
+    1. Known family match (exact substring in order).
+    2. Keyword rules (positive match, no negative hit; MCU requires explicit
+       MCU family token to prevent "board"/"module" from becoming MCU).
+    3. (None, None, None) — caller applies the UNK fallback.
+    """
+    # Step 1: known family — these are specific enough that substring is safe
+    for pattern, cat, sub, fam in _KNOWN_FAMILIES:
+        if pattern in lower:
+            return cat, sub, fam
+
+    # Step 2: keyword rules — single-word keywords match whole tokens only
+    for pos_kw, neg_kw, cat, sub in _KEYWORD_RULES:
+        if not any(_kw_matches(kw, lower, token_set) for kw in pos_kw):
+            continue
+        if neg_kw and any(_kw_matches(nk, lower, token_set) for nk in neg_kw):
+            continue
+        # MCU rule: require either an explicit MCU family token (esp32, arduino,
+        # etc.) OR the words "microcontroller"/"mcu"/"microprocessor" as whole
+        # tokens — "cjmcu" must not satisfy this.
+        if cat == "MCU" and sub == "DEV":
+            has_mcu_family = any(fam_tok in lower for fam_tok in _MCU_FAMILY_TOKENS)
+            has_mcu_explicit = any(kw in token_set for kw in (
+                "microcontroller", "mcu", "microprocessor"
+            ))
+            if not has_mcu_family and not has_mcu_explicit:
+                continue
+        return cat, sub, None
+
+    return None, None, None
+
+
+# ---------------------------------------------------------------------------
 # Normalisation
 # ---------------------------------------------------------------------------
 
@@ -111,7 +370,8 @@ class NormalisedDescription:
     tokens: list[str]
     package_hint: str | None = None
     value_hints: list[str] = field(default_factory=list)
-    kind_prefix: str | None = None
+    kind_prefix: str | None = None   # CAT-SUB  e.g. "PAS-RES", "SEN-IMU"
+    family: str | None = None         # e.g. "MPU6050", "USBMICRO"
 
 
 def normalise_description(description: str) -> NormalisedDescription:
@@ -123,7 +383,7 @@ def normalise_description(description: str) -> NormalisedDescription:
     3. Extract value hints (e.g. "10k", "100nF").
     4. Tokenise (split on whitespace and punctuation).
     5. Remove stop words.
-    6. Infer a part-type prefix for code generation.
+    6. Classify using family lookup then keyword rules.
     """
     text = description.strip()
 
@@ -139,20 +399,17 @@ def normalise_description(description: str) -> NormalisedDescription:
 
     # --- Tokenise -----------------------------------------------------------
     lower = text.lower()
-    # Replace punctuation (keep hyphens inside tokens) with spaces
     cleaned = re.sub(r"[^\w\s-]", " ", lower)
     raw_tokens = cleaned.split()
     tokens = [t for t in raw_tokens if t and t not in _STOP_WORDS and len(t) > 1]
 
-    # --- Kind prefix --------------------------------------------------------
+    # --- Classify -----------------------------------------------------------
+    token_set = set(tokens)
+    cat, sub, fam = _classify(lower, token_set)
+
     kind_prefix: str | None = None
-    for keywords, prefix in _KIND_PREFIXES:
-        for kw in keywords:
-            if kw in lower:
-                kind_prefix = prefix
-                break
-        if kind_prefix:
-            break
+    if cat and sub:
+        kind_prefix = f"{cat}-{sub}"
 
     return NormalisedDescription(
         raw=description,
@@ -160,6 +417,7 @@ def normalise_description(description: str) -> NormalisedDescription:
         package_hint=package_hint,
         value_hints=value_hints,
         kind_prefix=kind_prefix,
+        family=fam,
     )
 
 
@@ -261,41 +519,45 @@ _SEP = "-"
 
 
 def _build_code_prefix(normed: NormalisedDescription) -> str:
-    """Build the prefix part of the generated code from the normalised description.
+    """Build the CAT-SUB-FAMILY prefix for the generated code.
 
     Examples:
-      "10k resistor 0603"  → "RES-10K-0603"
-      "ESP32 dev board"    → "MCU-ESP32"
-      "DHT22 temp sensor"  → "SENSOR-DHT22"
+      "10k resistor 0603"        → "PAS-RES-10K-0603"
+      "ESP32 dev board"          → "MCU-DEV-ESP32"
+      "MPU-6050 IMU"             → "SEN-IMU-MPU6050"
+      "Micro USB breakout board" → "CON-USB-USBMICRO"
+      "unknown widget"           → "UNK-GEN-GENERIC"
     """
     parts: list[str] = []
 
     if normed.kind_prefix:
         parts.append(normed.kind_prefix)
 
-    # Add the most prominent value hint (first one), normalised to uppercase
-    if normed.value_hints:
+    # Family from lookup takes priority over value hints
+    if normed.family:
+        parts.append(normed.family)
+    elif normed.value_hints:
         val = re.sub(r"\s+", "", normed.value_hints[0]).upper()
         parts.append(val)
 
-    # Add package hint
+    # Add package hint (relevant for passive components)
     if normed.package_hint:
         parts.append(normed.package_hint)
 
-    # If we only have a prefix so far (or nothing), try to add the most
-    # descriptive non-stop-word token that's not already in the prefix.
-    existing_lower = {p.lower() for p in parts}
-    for tok in normed.tokens:
-        if tok.lower() not in existing_lower and not tok.isdigit() and len(tok) > 2:
-            if tok.lower() not in _STOP_WORDS:
-                parts.append(tok.upper())
-                break
+    # If we have no family/value yet, add the most descriptive token
+    if len(parts) <= 1:
+        existing_lower = {p.lower() for p in parts}
+        for tok in normed.tokens:
+            if tok.lower() not in existing_lower and not tok.isdigit() and len(tok) > 2:
+                if tok.lower() not in _STOP_WORDS:
+                    parts.append(tok.upper())
+                    break
 
     if not parts:
         # Fallback: take up to 3 tokens from the description
         parts = [t.upper() for t in normed.tokens[:3]]
 
-    return _SEP.join(parts) if parts else "PART"
+    return _SEP.join(parts) if parts else "UNK-GEN-GENERIC"
 
 
 async def suggest_part_code(description: str, db: AsyncSession) -> str:
@@ -305,7 +567,9 @@ async def suggest_part_code(description: str, db: AsyncSession) -> str:
     from the description and NNN is a zero-padded sequence number that makes
     the code unique within the current database.
 
-    E.g.  "10k resistor 0603"  →  "RES-10K-0603-001"
+    E.g.  "10k resistor 0603"        →  "PAS-RES-10K-0603-001"
+          "MPU-6050 IMU breakout"    →  "SEN-IMU-MPU6050-001"
+          "Micro USB breakout board" →  "CON-USB-USBMICRO-001"
     """
     from makervault.models.part import Part
 

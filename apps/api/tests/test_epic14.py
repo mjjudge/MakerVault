@@ -257,17 +257,36 @@ def test_normalise_value_extraction():
 
 def test_normalise_kind_prefix_resistor():
     nd = normalise_description("resistor 10k 0603")
-    assert nd.kind_prefix == "RES"
+    assert nd.kind_prefix == "PAS-RES"
 
 
 def test_normalise_kind_prefix_capacitor():
     nd = normalise_description("capacitor 100nF")
-    assert nd.kind_prefix == "CAP"
+    assert nd.kind_prefix == "PAS-CAP"
 
 
 def test_normalise_kind_prefix_mcu():
     nd = normalise_description("ESP32 dev board")
-    assert nd.kind_prefix == "MCU"
+    assert nd.kind_prefix == "MCU-DEV"
+    assert nd.family == "ESP32"
+
+
+def test_normalise_kind_prefix_sensor():
+    nd = normalise_description("MPU-6050 IMU gyroscope breakout")
+    assert nd.kind_prefix == "SEN-IMU"
+    assert nd.family == "MPU6050"
+
+
+def test_normalise_kind_prefix_usb_breakout():
+    nd = normalise_description("Micro USB breakout board")
+    assert nd.kind_prefix == "CON-USB"
+    assert nd.family == "USBMICRO"
+
+
+def test_normalise_no_mcu_for_generic_breakout():
+    """A plain breakout board without MCU family should not become MCU."""
+    nd = normalise_description("breakout board adapter")
+    assert nd.kind_prefix != "MCU-DEV"
 
 
 def test_normalise_stop_words_removed():
@@ -353,7 +372,7 @@ def test_score_alias_match_bonus():
 @pytest.mark.anyio
 async def test_suggest_code_empty_db(e14_session):
     code = await suggest_part_code("10k resistor 0603", e14_session)
-    assert code.startswith("RES")
+    assert "RES" in code
     assert code.endswith("-001")
 
 

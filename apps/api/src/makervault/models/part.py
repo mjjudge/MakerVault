@@ -24,6 +24,7 @@ from makervault.models.base import TimestampMixin, new_uuid
 # Enumerations ----------------------------------------------------------------
 
 PART_KIND_VALUES = (
+    # Original values (kept for backward compatibility)
     "component",
     "board",
     "module",
@@ -35,6 +36,17 @@ PART_KIND_VALUES = (
     "cable",
     "power_supply",
     "enclosure",
+    # Taxonomy-aligned values
+    "sensor",
+    "actuator",
+    "connector",
+    "communication",
+    "power",
+    "driver",
+    "display",
+    "switch",
+    "passive",
+    "mechanical",
 )
 
 PART_STATUS_VALUES = ("active", "draft", "archived")
