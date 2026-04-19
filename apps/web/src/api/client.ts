@@ -80,7 +80,7 @@ export interface Part {
   created_at: string
   updated_at: string
   // Taxonomy
-  category: string | null
+  tax_category: string | null
   subcategory: string | null
   family: string | null
   // Electrical / interface

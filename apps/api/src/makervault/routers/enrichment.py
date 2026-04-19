@@ -313,12 +313,20 @@ async def apply_enrichment_job(
         except Exception:
             is_pg = True
 
-        # Plain text fields — always safe to set
-        for field in ("category", "subcategory", "family", "form_factor",
-                      "voltage", "logic_level"):
-            val = result.get(field)
+        # Plain text fields — always safe to set.
+        # "category" in the AI result maps to the "tax_category" ORM attribute.
+        _TEXT_FIELD_MAP = {
+            "category": "tax_category",
+            "subcategory": "subcategory",
+            "family": "family",
+            "form_factor": "form_factor",
+            "voltage": "voltage",
+            "logic_level": "logic_level",
+        }
+        for result_key, attr in _TEXT_FIELD_MAP.items():
+            val = result.get(result_key)
             if val:
-                setattr(part, field, val)
+                setattr(part, attr, val)
 
         if is_pg:
             # ARRAY and JSONB fields — PostgreSQL only

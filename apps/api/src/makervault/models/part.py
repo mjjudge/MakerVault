@@ -93,7 +93,8 @@ class Part(TimestampMixin, Base):
     search_text: Mapped[str | None] = mapped_column(TSVECTOR, nullable=True)
 
     # Taxonomy fields (from classification)
-    category: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # named "tax_category" to avoid clash with the category_id/category relationship
+    tax_category: Mapped[str | None] = mapped_column("category", Text, nullable=True)
     subcategory: Mapped[str | None] = mapped_column(Text, nullable=True)
     family: Mapped[str | None] = mapped_column(Text, nullable=True)
 

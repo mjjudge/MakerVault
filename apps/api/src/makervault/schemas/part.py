@@ -45,7 +45,7 @@ class PartCreate(BaseSchema):
     needs_review: bool = False
     notes: str | None = None
     # Taxonomy
-    category: str | None = None
+    tax_category: str | None = None
     subcategory: str | None = None
     family: str | None = None
     # Electrical / interface
@@ -86,7 +86,7 @@ class PartUpdate(BaseSchema):
     needs_review: bool | None = None
     notes: str | None = None
     # Taxonomy
-    category: str | None = None
+    tax_category: str | None = None
     subcategory: str | None = None
     family: str | None = None
     # Electrical / interface
@@ -132,7 +132,7 @@ class PartResponse(BaseSchema):
     created_at: datetime
     updated_at: datetime
     # Taxonomy
-    category: str | None = None
+    tax_category: str | None = None
     subcategory: str | None = None
     family: str | None = None
     # Electrical / interface

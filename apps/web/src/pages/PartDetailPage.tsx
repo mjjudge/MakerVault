@@ -426,9 +426,9 @@ export function PartDetailPage() {
           </DetailSection>
 
           {/* Taxonomy */}
-          {(part.category || part.subcategory || part.family || part.form_factor) && (
+          {(part.tax_category || part.subcategory || part.family || part.form_factor) && (
             <DetailSection title="Classification">
-              {part.category && <DetailRow label="Category"><code>{part.category}{part.subcategory ? `-${part.subcategory}` : ''}</code></DetailRow>}
+              {part.tax_category && <DetailRow label="Category"><code>{part.tax_category}{part.subcategory ? `-${part.subcategory}` : ''}</code></DetailRow>}
               {part.family && <DetailRow label="Family">{part.family}</DetailRow>}
               {part.form_factor && <DetailRow label="Form Factor">{part.form_factor}</DetailRow>}
               {part.part_kind && <DetailRow label="Kind">{part.part_kind}</DetailRow>}

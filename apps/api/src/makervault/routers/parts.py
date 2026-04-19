@@ -94,14 +94,14 @@ async def create_part(
     data = body.model_dump()
 
     # Auto-classify from the part name + description if taxonomy fields are absent.
-    if not data.get("category"):
+    if not data.get("tax_category"):
         from makervault.services.intake_service import normalise_description
         probe = " ".join(filter(None, [data.get("name"), data.get("short_description")]))
         if probe:
             nd = normalise_description(probe)
             if nd.kind_prefix and "-" in nd.kind_prefix:
                 cat, sub = nd.kind_prefix.split("-", 1)
-                data.setdefault("category", cat)
+                data.setdefault("tax_category", cat)
                 data.setdefault("subcategory", sub)
             if nd.family:
                 data.setdefault("family", nd.family)
