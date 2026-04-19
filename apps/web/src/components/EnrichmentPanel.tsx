@@ -27,7 +27,8 @@ import {
 // ---------------------------------------------------------------------------
 
 const PART_JOB_TYPES: { value: EnrichmentJobType; label: string }[] = [
-  { value: 'classify_part', label: 'Classify part' },
+  { value: 'enrich_part', label: 'Enrich part (full schema)' },
+  { value: 'classify_part', label: 'Classify part (kind + tags)' },
   { value: 'generate_aliases', label: 'Generate aliases' },
 ]
 
@@ -246,7 +247,7 @@ function EnrichmentJobCard({
 export function EnrichmentPanel({ entityType, entityId, onApplied }: EnrichmentPanelProps) {
   const qc = useQueryClient()
   const [selectedJobType, setSelectedJobType] = useState<EnrichmentJobType>(
-    entityType === 'part' ? 'classify_part' : 'summarise_document'
+    entityType === 'part' ? 'enrich_part' : 'summarise_document'
   )
   const [runError, setRunError] = useState('')
 

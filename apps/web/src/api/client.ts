@@ -79,6 +79,23 @@ export interface Part {
   notes: string | null
   created_at: string
   updated_at: string
+  // Taxonomy
+  category: string | null
+  subcategory: string | null
+  family: string | null
+  // Electrical / interface
+  form_factor: string | null
+  interface: string[] | null
+  voltage: string | null
+  logic_level: string | null
+  // Functional
+  pins: string[] | null
+  capabilities: string[] | null
+  use_cases: string[] | null
+  key_specs: Record<string, unknown> | null
+  // Flags
+  protection_features: string[] | null
+  special_flags: string[] | null
 }
 
 export interface PartAlias {
@@ -360,6 +377,7 @@ export type EnrichmentJobType =
   | 'extract_metadata'
   | 'generate_aliases'
   | 'classify_part'
+  | 'enrich_part'
 
 export type EnrichmentEntityType = 'part' | 'document'
 

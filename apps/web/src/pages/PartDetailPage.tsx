@@ -5,6 +5,26 @@ import { partsApi, stockApi, documentsApi, locationsApi, containersApi, intakeAp
 import { DOCUMENT_TYPES, PART_DOC_RELATIONSHIPS, formatBytes } from '../utils/documents'
 import { EnrichmentPanel } from '../components/EnrichmentPanel'
 
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: '1.25rem' }}>
+      <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9ca3af', marginBottom: '0.5rem' }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.3rem', fontSize: '0.9rem' }}>
+      <span style={{ minWidth: '120px', color: '#6b7280', flexShrink: 0 }}>{label}</span>
+      <span>{children}</span>
+    </div>
+  )
+}
+
 const STOCK_DEFAULT = {
   quantity: '',
   unit: '',
@@ -394,29 +414,109 @@ export function PartDetailPage() {
         </div>
       ) : (
         <div className="card">
-          <table style={{ width: 'auto', fontSize: '0.9rem' }}>
-            <tbody>
-              {[
-                ['Status', <span className={`badge badge-${part.status}`}>{part.status}</span>],
-                ['Kind', part.part_kind ?? '—'],
-                ['Description', part.short_description ?? '—'],
-                ['Manufacturer', part.manufacturer ?? '—'],
-                ['MPN', part.manufacturer_part_number ?? '—'],
-                ['Default Unit', part.default_unit],
-                ['Package', part.package_type ?? '—'],
-                ['Spec', part.spec_summary ?? '—'],
-                ['Notes', part.notes ?? '—'],
-                ['Tags', part.tags && part.tags.length > 0
-                  ? part.tags.join(', ')
-                  : '—'],
-              ].map(([label, value]) => (
-                <tr key={label as string}>
-                  <td style={{ fontWeight: 500, paddingRight: '2rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{label}</td>
-                  <td>{value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Core identity */}
+          <DetailSection title="Identity">
+            <DetailRow label="Status"><span className={`badge badge-${part.status}`}>{part.status}</span></DetailRow>
+            <DetailRow label="Description">{part.short_description ?? '—'}</DetailRow>
+            <DetailRow label="Manufacturer">{part.manufacturer ?? '—'}</DetailRow>
+            <DetailRow label="MPN">{part.manufacturer_part_number ?? '—'}</DetailRow>
+            <DetailRow label="Package">{part.package_type ?? '—'}</DetailRow>
+            <DetailRow label="Default Unit">{part.default_unit}</DetailRow>
+            <DetailRow label="Notes">{part.notes ?? '—'}</DetailRow>
+          </DetailSection>
+
+          {/* Taxonomy */}
+          {(part.category || part.subcategory || part.family || part.form_factor) && (
+            <DetailSection title="Classification">
+              {part.category && <DetailRow label="Category"><code>{part.category}{part.subcategory ? `-${part.subcategory}` : ''}</code></DetailRow>}
+              {part.family && <DetailRow label="Family">{part.family}</DetailRow>}
+              {part.form_factor && <DetailRow label="Form Factor">{part.form_factor}</DetailRow>}
+              {part.part_kind && <DetailRow label="Kind">{part.part_kind}</DetailRow>}
+            </DetailSection>
+          )}
+
+          {/* Electrical */}
+          {(part.interface?.length || part.voltage || part.logic_level) && (
+            <DetailSection title="Electrical">
+              {part.interface && part.interface.length > 0 && (
+                <DetailRow label="Interface">{part.interface.join(', ')}</DetailRow>
+              )}
+              {part.voltage && <DetailRow label="Voltage">{part.voltage}</DetailRow>}
+              {part.logic_level && <DetailRow label="Logic Level">{part.logic_level}</DetailRow>}
+            </DetailSection>
+          )}
+
+          {/* Pinout */}
+          {part.pins && part.pins.length > 0 && (
+            <DetailSection title="Pinout">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                {part.pins.map((pin, i) => (
+                  <span key={i} style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '0.15rem 0.5rem', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                    {pin}
+                  </span>
+                ))}
+              </div>
+            </DetailSection>
+          )}
+
+          {/* Capabilities */}
+          {(part.capabilities?.length || part.use_cases?.length) && (
+            <DetailSection title="Capabilities & Use Cases">
+              {part.capabilities && part.capabilities.length > 0 && (
+                <DetailRow label="What it does">
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+                    {part.capabilities.map((c, i) => <li key={i}>{c}</li>)}
+                  </ul>
+                </DetailRow>
+              )}
+              {part.use_cases && part.use_cases.length > 0 && (
+                <DetailRow label="Use cases">
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+                    {part.use_cases.map((u, i) => <li key={i}>{u}</li>)}
+                  </ul>
+                </DetailRow>
+              )}
+            </DetailSection>
+          )}
+
+          {/* Key specs */}
+          {part.key_specs && Object.keys(part.key_specs).length > 0 && (
+            <DetailSection title="Key Specs">
+              <table style={{ fontSize: '0.85rem' }}>
+                <tbody>
+                  {Object.entries(part.key_specs).map(([k, v]) => (
+                    <tr key={k}>
+                      <td style={{ color: '#6b7280', paddingRight: '1.5rem', whiteSpace: 'nowrap' }}>{k}</td>
+                      <td>{String(v)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </DetailSection>
+          )}
+
+          {/* Flags */}
+          {(part.protection_features?.length || part.special_flags?.length) && (
+            <DetailSection title="Flags">
+              {part.protection_features && part.protection_features.length > 0 && (
+                <DetailRow label="Protection">{part.protection_features.join(', ')}</DetailRow>
+              )}
+              {part.special_flags && part.special_flags.length > 0 && (
+                <DetailRow label="Special">{part.special_flags.join(', ')}</DetailRow>
+              )}
+            </DetailSection>
+          )}
+
+          {/* Tags */}
+          {part.tags && part.tags.length > 0 && (
+            <DetailSection title="Tags">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {part.tags.map(tag => (
+                  <span key={tag} className="badge badge-draft" style={{ fontSize: '0.8rem' }}>{tag}</span>
+                ))}
+              </div>
+            </DetailSection>
+          )}
         </div>
       )}
 
@@ -710,18 +810,6 @@ export function PartDetailPage() {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Tags & Aliases */}
-      <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2rem', marginBottom: '1rem' }}>Tags</h2>
-      {part.tags && part.tags.length > 0 ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
-          {part.tags.map(tag => (
-            <span key={tag} className="badge badge-draft" style={{ fontSize: '0.8rem' }}>{tag}</span>
-          ))}
-        </div>
-      ) : (
-        <div className="empty" style={{ padding: '0.75rem 1.5rem', marginBottom: '1rem' }}>No tags.</div>
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '2rem', marginBottom: '1rem' }}>

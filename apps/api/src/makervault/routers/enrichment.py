@@ -79,7 +79,7 @@ async def _resolve_entity(entity_type: str, entity_id: uuid.UUID, db: AsyncSessi
 # ---------------------------------------------------------------------------
 
 _DOCUMENT_JOBS = {"summarise_document", "extract_metadata"}
-_PART_JOBS = {"generate_aliases", "classify_part"}
+_PART_JOBS = {"generate_aliases", "classify_part", "enrich_part"}
 
 
 def _validate_job_entity_compat(job_type: str, entity_type: str) -> None:
@@ -299,14 +299,37 @@ async def apply_enrichment_job(
                 part.part_kind = result["part_kind"]
 
         if is_pg and result.get("tags"):
-            # On PostgreSQL: update tags via ORM (ARRAY type works natively).
             existing_tags = list(part.tags or [])
             for tag in result["tags"]:
                 if tag and tag not in existing_tags:
                     existing_tags.append(tag)
             part.tags = existing_tags or None
-        # On SQLite the ARRAY type cannot bind Python lists, so tags are
-        # intentionally skipped — consistent with the parts router behaviour.
+
+    elif job.job_type == "enrich_part":
+        part = entity  # type: ignore[assignment]
+
+        try:
+            is_pg = db.sync_session.get_bind().dialect.name == "postgresql"
+        except Exception:
+            is_pg = True
+
+        # Plain text fields — always safe to set
+        for field in ("category", "subcategory", "family", "form_factor",
+                      "voltage", "logic_level"):
+            val = result.get(field)
+            if val:
+                setattr(part, field, val)
+
+        if is_pg:
+            # ARRAY and JSONB fields — PostgreSQL only
+            for field in ("interface", "pins", "capabilities", "use_cases",
+                          "protection_features", "special_flags"):
+                val = result.get(field)
+                if isinstance(val, list) and val:
+                    setattr(part, field, val)
+
+            if isinstance(result.get("key_specs"), dict) and result["key_specs"]:
+                part.key_specs = result["key_specs"]
 
     job.applied_at = datetime.now(timezone.utc)
     await db.flush()

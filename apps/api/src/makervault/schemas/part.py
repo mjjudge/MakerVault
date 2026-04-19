@@ -10,6 +10,18 @@ from makervault.models.part import PART_KIND_VALUES, PART_STATUS_VALUES
 from makervault.schemas.base import BaseSchema
 
 
+def _coerce_str_list(v: Any) -> Any:
+    """Accept None, a native list, or a comma-separated string (SQLite)."""
+    if v is None or isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        stripped = v.strip()
+        if not stripped:
+            return None
+        return [item.strip() for item in stripped.split(",") if item.strip()]
+    return v
+
+
 class PartCreate(BaseSchema):
     part_code: str = Field(..., min_length=1, max_length=100)
     name: str = Field(..., min_length=1, max_length=255)
@@ -32,6 +44,23 @@ class PartCreate(BaseSchema):
     status: str = Field(default="draft", pattern=f"^({'|'.join(PART_STATUS_VALUES)})$")
     needs_review: bool = False
     notes: str | None = None
+    # Taxonomy
+    category: str | None = None
+    subcategory: str | None = None
+    family: str | None = None
+    # Electrical / interface
+    form_factor: str | None = None
+    interface: list[str] | None = None
+    voltage: str | None = None
+    logic_level: str | None = None
+    # Functional
+    pins: list[str] | None = None
+    capabilities: list[str] | None = None
+    use_cases: list[str] | None = None
+    key_specs: dict[str, Any] | None = None
+    # Flags
+    protection_features: list[str] | None = None
+    special_flags: list[str] | None = None
 
 
 class PartUpdate(BaseSchema):
@@ -56,6 +85,23 @@ class PartUpdate(BaseSchema):
     status: str | None = Field(default=None, pattern=f"^({'|'.join(PART_STATUS_VALUES)})$")
     needs_review: bool | None = None
     notes: str | None = None
+    # Taxonomy
+    category: str | None = None
+    subcategory: str | None = None
+    family: str | None = None
+    # Electrical / interface
+    form_factor: str | None = None
+    interface: list[str] | None = None
+    voltage: str | None = None
+    logic_level: str | None = None
+    # Functional
+    pins: list[str] | None = None
+    capabilities: list[str] | None = None
+    use_cases: list[str] | None = None
+    key_specs: dict[str, Any] | None = None
+    # Flags
+    protection_features: list[str] | None = None
+    special_flags: list[str] | None = None
 
 
 class PartResponse(BaseSchema):
@@ -85,32 +131,30 @@ class PartResponse(BaseSchema):
     notes: str | None
     created_at: datetime
     updated_at: datetime
+    # Taxonomy
+    category: str | None = None
+    subcategory: str | None = None
+    family: str | None = None
+    # Electrical / interface
+    form_factor: str | None = None
+    interface: list[str] | None = None
+    voltage: str | None = None
+    logic_level: str | None = None
+    # Functional
+    pins: list[str] | None = None
+    capabilities: list[str] | None = None
+    use_cases: list[str] | None = None
+    key_specs: dict[str, Any] | None = None
+    # Flags
+    protection_features: list[str] | None = None
+    special_flags: list[str] | None = None
 
-    @field_validator("aliases", mode="before")
+    @field_validator("aliases", "tags", "interface", "pins",
+                     "capabilities", "use_cases", "protection_features",
+                     "special_flags", mode="before")
     @classmethod
-    def _coerce_aliases(cls, v: Any) -> Any:
-        """Accept a plain string (SQLite comma-sep storage) or native list."""
-        if v is None or isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            stripped = v.strip()
-            if not stripped:
-                return None
-            return [a.strip() for a in stripped.split(",") if a.strip()]
-        return v
-
-    @field_validator("tags", mode="before")
-    @classmethod
-    def _coerce_tags(cls, v: Any) -> Any:
-        """Accept a plain string (SQLite comma-sep storage) or native list."""
-        if v is None or isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            stripped = v.strip()
-            if not stripped:
-                return None
-            return [t.strip() for t in stripped.split(",") if t.strip()]
-        return v
+    def _coerce_list(cls, v: Any) -> Any:
+        return _coerce_str_list(v)
 
 
 class PartListResponse(BaseSchema):

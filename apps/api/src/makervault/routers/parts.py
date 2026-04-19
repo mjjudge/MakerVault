@@ -92,11 +92,30 @@ async def create_part(
             detail=f"A part with code '{body.part_code}' already exists.",
         )
     data = body.model_dump()
+
+    # Auto-classify from the part name + description if taxonomy fields are absent.
+    if not data.get("category"):
+        from makervault.services.intake_service import normalise_description
+        probe = " ".join(filter(None, [data.get("name"), data.get("short_description")]))
+        if probe:
+            nd = normalise_description(probe)
+            if nd.kind_prefix and "-" in nd.kind_prefix:
+                cat, sub = nd.kind_prefix.split("-", 1)
+                data.setdefault("category", cat)
+                data.setdefault("subcategory", sub)
+            if nd.family:
+                data.setdefault("family", nd.family)
+
     # Strip PostgreSQL ARRAY fields on non-PostgreSQL backends (e.g. SQLite in tests).
+    _ARRAY_FIELDS = (
+        "aliases", "tags", "interface", "pins",
+        "capabilities", "use_cases", "protection_features", "special_flags",
+    )
     try:
         if db.sync_session.get_bind().dialect.name != "postgresql":
-            data.pop("aliases", None)
-            data.pop("tags", None)
+            for f in _ARRAY_FIELDS:
+                data.pop(f, None)
+            data.pop("key_specs", None)
     except Exception:
         pass
     part = Part(**data)
@@ -208,11 +227,16 @@ async def update_part(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"A part with code '{updates['part_code']}' already exists.",
             )
-    # Strip PostgreSQL ARRAY fields on non-PostgreSQL backends (e.g. SQLite in tests).
+    # Strip PostgreSQL ARRAY / JSONB fields on non-PostgreSQL backends.
+    _ARRAY_FIELDS = (
+        "aliases", "tags", "interface", "pins",
+        "capabilities", "use_cases", "protection_features", "special_flags",
+    )
     try:
         if db.sync_session.get_bind().dialect.name != "postgresql":
-            updates.pop("aliases", None)
-            updates.pop("tags", None)
+            for f in _ARRAY_FIELDS:
+                updates.pop(f, None)
+            updates.pop("key_specs", None)
     except Exception:
         pass
     for field, value in updates.items():

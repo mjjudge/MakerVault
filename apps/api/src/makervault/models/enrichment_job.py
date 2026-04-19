@@ -33,6 +33,7 @@ ENRICHMENT_JOB_TYPE_VALUES = (
     "extract_metadata",
     "generate_aliases",
     "classify_part",
+    "enrich_part",
 )
 
 ENRICHMENT_ENTITY_TYPE_VALUES = (
@@ -64,6 +65,10 @@ class EnrichmentJob(TimestampMixin, Base):
                                    capabilities, tags}``
     * ``generate_aliases``    → ``{aliases, confidence}``
     * ``classify_part``       → ``{part_kind, tags, confidence}``
+    * ``enrich_part``         → ``{category, subcategory, family, form_factor,
+                                   interface, voltage, logic_level, pins,
+                                   capabilities, use_cases, key_specs,
+                                   protection_features, special_flags, confidence}``
     """
 
     __tablename__ = "enrichment_jobs"

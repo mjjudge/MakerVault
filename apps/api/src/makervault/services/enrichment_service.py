@@ -104,6 +104,45 @@ def _build_generate_aliases_messages(part: "Part") -> list[dict]:
     ]
 
 
+def _build_enrich_part_messages(part: "Part") -> list[dict]:
+    user_content = (
+        f"Part name: {part.name}\n"
+        f"Description: {part.short_description or 'N/A'}\n"
+        f"Manufacturer: {part.manufacturer or 'N/A'}\n"
+        f"MPN: {part.manufacturer_part_number or 'N/A'}\n"
+        f"Category: {part.category or 'N/A'}\n"
+        f"Subcategory: {part.subcategory or 'N/A'}\n"
+        f"Family: {part.family or 'N/A'}\n\n"
+        "You are enriching an IoT/electronics inventory record. "
+        "Fill in the fields below based on your knowledge of this part. "
+        "Be specific and concise. If a field is not applicable, return null.\n\n"
+        "Return JSON with exactly these fields:\n"
+        "  category            (string: SEN/MCU/PWR/CON/COM/DRV/DIS/SWI/PAS/ACT/MEC/CAB/TOO, or null)\n"
+        "  subcategory         (string: e.g. IMU, USB, CHG, DEV — 2-3 char code, or null)\n"
+        "  family              (string: model/family name e.g. MPU6050, TP4056, or null)\n"
+        "  form_factor         (string: one of 'Breakout board', 'Module', 'Bare IC', "
+        "'Dev board', 'Cable', 'Through-hole', 'Shield', or null)\n"
+        "  interface           (array of strings: e.g. [\"I2C\", \"SPI\"], or [])\n"
+        "  voltage             (string: e.g. '3.3V', '5V', '3.3–5V', or null)\n"
+        "  logic_level         (string: e.g. '3.3V', '5V tolerant', or null)\n"
+        "  pins                (array of strings listing pin names in order, e.g. "
+        "[\"VCC\", \"GND\", \"SCL\", \"SDA\"], or [])\n"
+        "  capabilities        (array of short strings describing what the part does, e.g. "
+        "[\"Measures acceleration (3-axis)\", \"Measures rotation (gyro)\"], or [])\n"
+        "  use_cases           (array of short strings, e.g. "
+        "[\"Tilt sensing\", \"Robot balance\", \"Gesture detection\"], or [])\n"
+        "  key_specs           (object of key-value spec pairs, e.g. "
+        "{\"axes\": \"6-DOF\", \"range\": \"±2g to ±16g\", \"resolution\": \"16-bit\"}, or {})\n"
+        "  protection_features (array of strings, e.g. [\"Overcharge\", \"Reverse polarity\"], or [])\n"
+        "  special_flags       (array of strings, e.g. [\"High current\", \"Needs heatsink\"], or [])\n"
+        "  confidence          (integer 0-100)\n"
+    )
+    return [
+        {"role": "system", "content": _SYSTEM_INSTRUCTION},
+        {"role": "user", "content": user_content},
+    ]
+
+
 def _build_classify_part_messages(part: "Part") -> list[dict]:
     from makervault.models.part import PART_KIND_VALUES
 
@@ -182,6 +221,8 @@ async def run_enrichment(
         raw_messages = _build_generate_aliases_messages(entity)  # type: ignore[arg-type]
     elif job_type == "classify_part":
         raw_messages = _build_classify_part_messages(entity)  # type: ignore[arg-type]
+    elif job_type == "enrich_part":
+        raw_messages = _build_enrich_part_messages(entity)  # type: ignore[arg-type]
     else:
         raise ValueError(f"Unknown job_type: {job_type!r}")
 

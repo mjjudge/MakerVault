@@ -92,6 +92,27 @@ class Part(TimestampMixin, Base):
     aliases: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     search_text: Mapped[str | None] = mapped_column(TSVECTOR, nullable=True)
 
+    # Taxonomy fields (from classification)
+    category: Mapped[str | None] = mapped_column(Text, nullable=True)
+    subcategory: Mapped[str | None] = mapped_column(Text, nullable=True)
+    family: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Electrical / interface layer
+    form_factor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    interface: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    voltage: Mapped[str | None] = mapped_column(Text, nullable=True)
+    logic_level: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Functional data
+    pins: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    capabilities: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    use_cases: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    key_specs: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Special handling flags
+    protection_features: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    special_flags: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+
     is_consumable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_serialised: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_hazardous: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
