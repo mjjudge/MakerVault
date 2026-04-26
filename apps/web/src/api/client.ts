@@ -358,6 +358,14 @@ export const projectsApi = {
     apiClient.get<BOMAvailabilityResponse>(`/projects/${projectId}/availability`).then(r => r.data),
 }
 
+export interface AIFeatureAssignment {
+  feature_key: string
+  feature_label: string
+  provider_id: string | null
+  provider_name: string | null
+  updated_at: string
+}
+
 export const aiApi = {
   list: () =>
     apiClient.get<AIProviderConfig[]>('/ai/providers').then(r => r.data),
@@ -370,6 +378,12 @@ export const aiApi = {
   delete: (id: string) => apiClient.delete(`/ai/providers/${id}`),
   healthCheck: (id: string) =>
     apiClient.post<HealthCheckResponse>(`/ai/providers/${id}/health`).then(r => r.data),
+  listFeatureAssignments: () =>
+    apiClient.get<AIFeatureAssignment[]>('/ai/feature-assignments').then(r => r.data),
+  setFeatureAssignment: (featureKey: string, providerId: string | null) =>
+    apiClient
+      .put<AIFeatureAssignment>(`/ai/feature-assignments/${featureKey}`, { provider_id: providerId })
+      .then(r => r.data),
 }
 
 export type EnrichmentJobType =

@@ -7,6 +7,7 @@ Import all models here so that:
 Add new model modules to the __all__ list as they are created.
 """
 
+from makervault.models.ai_feature_assignment import AIFeatureAssignment
 from makervault.models.ai_provider_config import AIProviderConfig
 from makervault.models.backup_record import BackupRecord
 from makervault.models.category import Category
@@ -24,6 +25,7 @@ from makervault.models.stock_item_document import StockItemDocument
 from makervault.models.usage_history import UsageHistory
 
 __all__ = [
+    "AIFeatureAssignment",
     "AIProviderConfig",
     "BackupRecord",
     "Category",

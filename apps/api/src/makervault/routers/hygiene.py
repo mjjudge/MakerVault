@@ -72,7 +72,7 @@ async def hygiene_dashboard(
 
     * Parts that have no linked documents
     * Parts that have no aliases (both Part.aliases array and PartAlias rows)
-    * Parts that have no capabilities_json
+    * Parts that have no capabilities (array) or capabilities_json
     * Parts whose active stock is spread across more than one placement
     * Groups of potential duplicate parts
     """
@@ -134,7 +134,7 @@ async def hygiene_dashboard(
             missing_documents.append(_part_summary(p))
         if not has_alias:
             missing_aliases.append(_part_summary(p))
-        if not p.capabilities_json:
+        if not p.capabilities and not p.capabilities_json:
             missing_capabilities.append(_part_summary(p))
 
     # ------------------------------------------------------------------

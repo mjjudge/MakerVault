@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { aiApi, type AIProviderConfig, type HealthCheckResponse } from '../api/client'
+import { aiApi, type AIProviderConfig, type AIFeatureAssignment, type HealthCheckResponse } from '../api/client'
 
 const PROVIDER_TYPES = ['openai', 'ollama', 'openai_compatible', 'anthropic'] as const
 type ProviderType = typeof PROVIDER_TYPES[number]
@@ -314,6 +314,9 @@ export function AISettingsPage() {
         </div>
       )}
 
+      {/* Feature Assignments */}
+      <FeatureAssignmentsSection providers={providers} />
+
       {/* Help text */}
       <div className="card" style={{ marginTop: '2rem', background: '#f9fafb' }}>
         <h3 style={{ marginTop: 0, marginBottom: '0.75rem', fontSize: '0.95rem', color: '#374151' }}>
@@ -324,7 +327,9 @@ export function AISettingsPage() {
           <li>The <strong>api_key_env_var</strong> field records which env var to read at runtime (e.g. <code>OPENAI_API_KEY</code>).</li>
           <li>For <strong>Ollama</strong>: run <code>ollama pull llama3</code> on the host and point to <code>http://ollama:11434</code>.</li>
           <li>For <strong>OpenAI</strong>: set <code>OPENAI_API_KEY</code> in <code>infra/docker/.env</code>.</li>
-          <li>Only the <strong>default</strong> enabled provider is used for AI tasks. Use "Set default" to switch.</li>
+          <li>For <strong>Anthropic</strong>: set <code>ANTHROPIC_API_KEY</code> in <code>infra/docker/.env</code>.</li>
+          <li>The <strong>default</strong> provider is used for any feature with no specific assignment.</li>
+          <li>Use <strong>Feature Assignments</strong> below to route individual AI tasks to different models.</li>
         </ul>
       </div>
 
@@ -442,6 +447,90 @@ export function AISettingsPage() {
             </form>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Feature Assignments section
+// ---------------------------------------------------------------------------
+
+function FeatureAssignmentsSection({ providers }: { providers: AIProviderConfig[] }) {
+  const qc = useQueryClient()
+
+  const { data: assignments = [], isLoading } = useQuery({
+    queryKey: ['ai', 'feature-assignments'],
+    queryFn: () => aiApi.listFeatureAssignments(),
+  })
+
+  const setAssignmentMutation = useMutation({
+    mutationFn: ({ featureKey, providerId }: { featureKey: string; providerId: string | null }) =>
+      aiApi.setFeatureAssignment(featureKey, providerId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai', 'feature-assignments'] }),
+  })
+
+  const enabledProviders = providers.filter(p => p.is_enabled)
+
+  return (
+    <div className="card" style={{ marginTop: '2rem' }}>
+      <h2 style={{ marginTop: 0, marginBottom: '0.25rem', fontSize: '1.1rem' }}>
+        Feature Assignments
+      </h2>
+      <p style={{ marginTop: 0, marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+        Choose which AI provider handles each job type. Leave as "Use default" to always use the
+        default provider.
+      </p>
+
+      {isLoading ? (
+        <div className="loading">Loading assignments…</div>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#374151', fontWeight: 600 }}>
+                Feature
+              </th>
+              <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#374151', fontWeight: 600 }}>
+                Provider
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {assignments.map((a: AIFeatureAssignment) => (
+              <tr key={a.feature_key} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                <td style={{ padding: '0.6rem 0.75rem', color: '#111827' }}>
+                  {a.feature_label}
+                  <div style={{ fontSize: '0.775rem', color: '#9ca3af', marginTop: '0.1rem' }}>
+                    {a.feature_key}
+                  </div>
+                </td>
+                <td style={{ padding: '0.6rem 0.75rem' }}>
+                  <select
+                    className="form-control"
+                    style={{ maxWidth: '280px', fontSize: '0.875rem', padding: '0.3rem 0.5rem' }}
+                    value={a.provider_id ?? ''}
+                    disabled={setAssignmentMutation.isPending}
+                    onChange={e => {
+                      const val = e.target.value
+                      setAssignmentMutation.mutate({
+                        featureKey: a.feature_key,
+                        providerId: val === '' ? null : val,
+                      })
+                    }}
+                  >
+                    <option value="">— Use default —</option>
+                    {enabledProviders.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.model})
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   )

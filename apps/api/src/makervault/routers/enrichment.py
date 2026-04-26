@@ -36,7 +36,7 @@ from makervault.schemas.enrichment_job import (
     EnrichmentJobListResponse,
     EnrichmentJobResponse,
 )
-from makervault.ai.service import get_active_provider
+from makervault.ai.service import get_provider_for_feature
 from makervault.services.enrichment_service import run_enrichment
 
 logger = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ async def create_enrichment_job(
     db.add(job)
     await db.flush()
 
-    provider = await get_active_provider(db)
+    provider = await get_provider_for_feature(db, body.job_type)
     if provider is None:
         job.status = "failed"
         job.error_message = (

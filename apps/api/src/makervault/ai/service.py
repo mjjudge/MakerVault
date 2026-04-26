@@ -8,6 +8,8 @@ Functions
 get_active_provider
     Return an instantiated adapter for the current default enabled provider,
     or ``None`` if none is configured.
+get_provider_for_feature
+    Return an adapter for a specific AI feature, falling back to the default.
 get_provider_by_id
     Return an instantiated adapter for a specific provider config record.
 build_provider
@@ -21,6 +23,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from makervault.models.ai_feature_assignment import AIFeatureAssignment
 from makervault.models.ai_provider_config import AIProviderConfig
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,7 @@ def build_provider(config: AIProviderConfig):
     Raises ``ValueError`` for unknown provider types.
     Raises ``EnvironmentError`` if a required API key env var is missing.
     """
+    from makervault.ai.adapters.anthropic_adapter import AnthropicProvider
     from makervault.ai.adapters.ollama_adapter import OllamaProvider
     from makervault.ai.adapters.openai_adapter import OpenAIProvider
 
@@ -46,10 +50,12 @@ def build_provider(config: AIProviderConfig):
             return OpenAIProvider(config)
         case "ollama":
             return OllamaProvider(config)
+        case "anthropic":
+            return AnthropicProvider(config)
         case _:
             raise ValueError(
                 f"Unknown AI provider type: '{config.provider_type}'. "
-                f"Supported types: openai, openai_compatible, ollama."
+                f"Supported types: openai, openai_compatible, ollama, anthropic."
             )
 
 
@@ -81,6 +87,28 @@ async def get_active_provider(db: AsyncSession):
     except (ValueError, EnvironmentError) as exc:
         logger.warning("Could not instantiate default AI provider: %s", exc)
         return None
+
+
+async def get_provider_for_feature(db: AsyncSession, feature_key: str):
+    """Return an adapter for a specific AI feature, or ``None``.
+
+    Looks up the per-feature assignment first.  If the feature has an assigned
+    provider that is enabled, that provider is used.  Otherwise falls back to
+    ``get_active_provider`` (the global default).
+    """
+    assignment = await db.get(AIFeatureAssignment, feature_key)
+    if assignment is not None and assignment.provider_id is not None:
+        config = await db.get(AIProviderConfig, assignment.provider_id)
+        if config is not None and config.is_enabled:
+            try:
+                return build_provider(config)
+            except (ValueError, EnvironmentError) as exc:
+                logger.warning(
+                    "Could not instantiate AI provider for feature '%s': %s",
+                    feature_key,
+                    exc,
+                )
+    return await get_active_provider(db)
 
 
 async def get_provider_by_id(db: AsyncSession, provider_id):
